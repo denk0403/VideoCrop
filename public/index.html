@@ -3,7 +3,21 @@
         <meta charset="UTF-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="keywords" content="video, crop, ffmpeg" />
+        <meta name="author" content="Dennis Kats" />
+        <meta name="description" content="A browser-based video cropping tool." />
         <title>VideoCrop</title>
+
+        <link rel="icon" href="./icon.png" />
+
+        <!-- Open Graph protocol support-->
+        <meta property="og:title" content="VideoCrop" />
+        <meta property="og:type" content="website" />
+        <meta property="og:description" content="A browser-based video cropping tool." />
+
+        <!-- Twitter Card support-->
+        <meta name="twitter:card" content="summary" />
+
         <script async src="./swWrapper.js"></script>
         <script defer src="./ffmpeg.min.js"></script>
         <script defer src="./index.js"></script>
@@ -20,7 +34,26 @@
             }
 
             #title {
-                font: bold 2rem "Gotham", serif;
+                font: bold 2.5rem "Gotham", serif;
+                margin-bottom: 0;
+            }
+
+            #author {
+                display: inline-block;
+                font-family: "Trebuchet MS";
+                font-size: small;
+                margin-bottom: 30px;
+            }
+
+            #author a {
+                color: blue;
+                display: inline-block;
+                transition: transform 0.25s linear;
+            }
+
+            #author a:hover {
+                color: rgb(0, 0, 169);
+                transform: scale(1.05, 1.05);
             }
 
             #description {
@@ -108,6 +141,14 @@
     </head>
     <body>
         <h1 id="title">VideoCrop</h1>
+
+        <p id="author">
+            <span style="display: block"
+                >Made by <a href="https://github.com/denk0403">Dennis Kats</a>
+            </span>
+            <a href="https://github.com/denk0403/VideoCrop">View the source on GitHub</a>
+        </p>
+
         <p id="description">
             <span style="font-weight: bold">VideoCrop</span> is an offline, browser-based video
             cropping tool built on top of

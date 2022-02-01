@@ -11,4 +11,4 @@ app.use("/", (_, res, next) => {
 app.use(express.static(path.join(__dirname, "./public")));
 
 const PORT = 5501;
-app.listen(PORT, () => console.log(`listening on port ${PORT}`));
+app.listen(PORT, () => console.log(`listening on port ${PORT}: ${`http://localhost:${PORT}`}`));
