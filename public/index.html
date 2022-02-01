@@ -1,0 +1,135 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>VideoCrop</title>
+        <script async src="./swWrapper.js"></script>
+        <script defer src="./ffmpeg.min.js"></script>
+        <script defer src="./index.js"></script>
+        <style>
+            body {
+                margin: 20px;
+                text-align: center;
+                background-color: lightcyan;
+            }
+
+            body > *:not(h1, h2, h3, h4, h5, h6) {
+                display: block;
+                margin: 10px 0;
+            }
+
+            #title {
+                font: bold 2rem "Gotham", serif;
+            }
+
+            #description {
+                display: block;
+                max-width: 900px;
+                margin: 0 auto 20px;
+                font-family: "Trebuchet MS";
+            }
+
+            #input {
+                display: inline-block;
+            }
+
+            #bounds {
+                position: relative;
+                display: inline-block;
+            }
+
+            #area {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 50%;
+                height: 50%;
+                background-color: rgba(0, 0, 0, 0.33);
+                z-index: 1;
+                outline: dashed #949494 2.5px;
+                box-sizing: border-box;
+                resize: both;
+                overflow: auto;
+                display: none;
+                justify-content: center;
+                align-items: center;
+                overflow-wrap: anywhere;
+                color: rgba(255, 255, 255, 0.2);
+                font: bold 1.05rem "Fire Sans", sans-serif;
+                transition: color 0.25s linear 1s;
+            }
+
+            #area:hover {
+                color: white;
+                transition: color 0.25s linear;
+            }
+
+            #crop-btn {
+                padding: 7px;
+                min-width: 75px;
+                background-color: snow;
+                border-radius: 5px;
+            }
+
+            #loader {
+                display: none;
+                border: 5px solid #f3f3f3;
+                animation: spin 1s linear infinite;
+                border-top: 5px solid #555;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                vertical-align: middle;
+                margin-left: 15px;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            #progress {
+                margin-left: 7px;
+            }
+
+            #result {
+                margin: 10px;
+            }
+
+            #video-output {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <h1 id="title">VideoCrop</h1>
+        <p id="description">
+            <span style="font-weight: bold">VideoCrop</span> is an offline, browser-based video
+            cropping tool built on top of
+            <span style="font-family: 'Courier New'; font-weight: bold">ffmpeg.wasm</span>. In fact,
+            VideoCrop will never upload or send anything to a server, and works even if you disable
+            your Wi-Fi. Start by clicking on the file input button or by dragging and dropping a
+            video file onto the page.
+        </p>
+        <input type="file" id="input" accept="video/*" />
+        <div>
+            <div id="bounds">
+                <div id="area"></div>
+                <video id="video-input" controls></video>
+            </div>
+        </div>
+        <div>
+            <button disabled id="crop-btn">Crop</button>
+            <div id="loader"></div>
+            <span id="progress"></span>
+        </div>
+        <div style="border: 1px solid darkgray; margin: 20px 0"></div>
+        <h3 id="result">Result</h3>
+        <video id="video-output" controls></video>
+    </body>
+</html>
