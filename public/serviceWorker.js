@@ -3,11 +3,14 @@ const urlsToCache = [
     "/",
     "/index.js",
     "/ffmpeg.min.js",
-    "/ffmpeg-core/ffmpeg-core.worker.js",
-    "/ffmpeg-core/ffmpeg-core.js",
-    "/ffmpeg-core/ffmpeg-core.wasm",
     "/serviceWorker.js",
     "/swWrapper.js",
+    // "/ffmpeg-core/ffmpeg-core.worker.js",
+    // "/ffmpeg-core/ffmpeg-core.js",
+    // "/ffmpeg-core/ffmpeg-core.wasm",
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.0/dist/ffmpeg-core.wasm",
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js",
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.0/dist/ffmpeg-core.worker.js",
 ];
 
 // Install a service worker

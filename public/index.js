@@ -23,7 +23,8 @@ function init() {
     let ffmpeg;
     function initFFmpeg() {
         ffmpeg = createFFmpeg({
-            corePath: "./ffmpeg-core/ffmpeg-core.js",
+            // corePath: "./ffmpeg-core/ffmpeg-core.js",
+            corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js",
             progress: ({ ratio }) => {
                 progress.textContent = `${(ratio * 100).toFixed(2)}%`;
             },
