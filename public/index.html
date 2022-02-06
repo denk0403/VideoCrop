@@ -67,6 +67,19 @@
                 display: inline-block;
             }
 
+            #error-msg {
+                margin-top: 5px;
+                color: red;
+                font-family: "Trebuchet MS";
+                transition: opacity 1s linear 4s;
+                opacity: 0;
+            }
+
+            #error-msg.show {
+                opacity: 100;
+                transition: none;
+            }
+
             #bounds {
                 position: relative;
                 display: inline-block;
@@ -76,8 +89,10 @@
                 position: absolute;
                 top: 0;
                 left: 0;
-                width: 50%;
-                height: 50%;
+                width: 50px;
+                height: 50px;
+                min-width: 50px;
+                min-height: 50px;
                 background-color: rgba(0, 0, 0, 0.33);
                 z-index: 1;
                 outline: dashed #949494 2.5px;
@@ -88,14 +103,35 @@
                 justify-content: center;
                 align-items: center;
                 overflow-wrap: anywhere;
+            }
+
+            #area:focus {
+                outline: revert;
+            }
+
+            #area-txt {
                 color: rgba(255, 255, 255, 0.2);
                 font: bold 1.05rem "Fire Sans", sans-serif;
                 transition: color 0.25s linear 1s;
             }
 
-            #area:hover {
+            #area:is(:hover, :focus) #area-txt {
                 color: white;
                 transition: color 0.25s linear;
+            }
+
+            #params {
+                margin: 10px;
+                display: inline-block;
+            }
+
+            .param {
+                margin: 5px;
+                display: block;
+            }
+
+            .param input {
+                width: 75px;
             }
 
             #crop-btn {
@@ -130,8 +166,30 @@
                 margin-left: 7px;
             }
 
-            #result {
-                margin: 10px;
+            #result-line * {
+                vertical-align: middle;
+            }
+
+            #result-title {
+                margin: 7px;
+                display: inline-block;
+            }
+
+            #share-icon {
+                fill: black;
+                background-color: rgb(225, 225, 225);
+                padding: 3px;
+                border-radius: 3px;
+                display: none;
+            }
+
+            #share-icon.show {
+                display: inline-block;
+            }
+
+            #share-icon:hover {
+                fill: rgb(0, 123, 255);
+                background-color: rgb(215, 215, 215);
             }
 
             #video-output {
@@ -157,11 +215,28 @@
             your Wi-Fi. Start by clicking on the file input button or by dragging and dropping a
             video file onto the page.
         </p>
-        <input type="file" id="input" accept="video/*" />
         <div>
-            <div id="bounds">
-                <div id="area"></div>
-                <video id="video-input" controls></video>
+            <input type="file" id="input" accept="video/*" />
+            <div id="error-msg"></div>
+        </div>
+        <div>
+            <div>
+                <div id="bounds">
+                    <div id="area" tabindex="0"><div id="area-txt"></div></div>
+                    <video id="video-input" controls></video>
+                </div>
+            </div>
+            <div id="params">
+                <div class="param">
+                    Trim:
+                    <input id="start-time" type="number" min="0" step="0.01" disabled />
+                    —
+                    <input id="end-time" type="number" min="1" step="0.01" disabled />
+                </div>
+                <label class="param scale">
+                    Scale:
+                    <input id="scale" type="number" min="0.1" step="0.1" disabled />
+                </label>
             </div>
         </div>
         <div>
@@ -170,7 +245,22 @@
             <span id="progress"></span>
         </div>
         <div style="border: 1px solid darkgray; margin: 20px 0"></div>
-        <h3 id="result">Result</h3>
+        <div id="result-line">
+            <h2 id="result-title">Result</h2>
+            <svg
+                id="share-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                x="0px"
+                y="0px"
+                width="25"
+                height="25"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    d="M 16.707031 2.2929688 L 15.292969 3.7070312 L 17.585938 6 L 17 6 C 10.936593 6 6 10.936593 6 17 L 6 18 L 8 18 L 8 17 C 8 12.017407 12.017407 8 17 8 L 17.585938 8 L 15.292969 10.292969 L 16.707031 11.707031 L 21.414062 7 L 16.707031 2.2929688 z M 2 8 L 2 9 L 2 19 C 2 20.64497 3.3550302 22 5 22 L 19 22 C 20.64497 22 22 20.64497 22 19 L 22 18 L 22 17 L 20 17 L 20 18 L 20 19 C 20 19.56503 19.56503 20 19 20 L 5 20 C 4.4349698 20 4 19.56503 4 19 L 4 9 L 4 8 L 2 8 z"
+                ></path>
+            </svg>
+        </div>
         <video id="video-output" controls></video>
     </body>
 </html>
