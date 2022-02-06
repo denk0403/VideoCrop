@@ -100,6 +100,7 @@ function init() {
         if (videoOut.src) URL.revokeObjectURL(videoOut.src);
         videoOut.onresize = () => {
             videoOut.style.display = "inline-block";
+            videoOut.scrollIntoView({ behavior: "smooth" });
         };
 
         const objURL = URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }));
