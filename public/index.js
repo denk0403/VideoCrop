@@ -110,7 +110,7 @@ function init() {
             .then((res) => res.blob())
             .then((blob) => {
                 const shareData = {
-                    files: [new File([blob], file.name)],
+                    files: [new File([blob], file.name, { type: "video/mp4" })],
                     text: `Cropped using ${location.href}`,
                 };
 
