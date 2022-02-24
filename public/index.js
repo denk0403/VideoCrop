@@ -25,6 +25,8 @@ function init() {
     const endTimeInput = document.getElementById("end-time");
     /** @type {HTMLInputElement} */
     const scaleInput = document.getElementById("scale");
+    /** @type {HTMLDivElement} */
+    const outDim = document.getElementById("out-dim");
 
     let errorTimer;
     /**
@@ -48,7 +50,11 @@ function init() {
     }
 
     new ResizeObserver(() => {
-        areaTxt.textContent = `${areaElt.offsetWidth} x ${areaElt.offsetHeight}`;
+        const width = areaElt.offsetWidth;
+        const height = areaElt.offsetHeight;
+        areaTxt.textContent = `${width} x ${height}`;
+        const [outWidth, outHeight] = calcDimensions(width, height, scaleInput.valueAsNumber);
+        outDim.textContent = `Output Dimensions: ${outWidth} x ${outHeight}`;
     }).observe(areaElt);
 
     const { createFFmpeg, fetchFile } = FFmpeg;
@@ -59,12 +65,27 @@ function init() {
             // corePath: "./ffmpeg-core/ffmpeg-core.js",
             corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js",
             progress: ({ ratio }) => {
-                progress.textContent = `${(ratio * 100).toFixed(2)}%`;
+                const clampedRatio = clamp(0, ratio, 100);
+                progress.textContent = `${(clampedRatio * 100).toFixed(2)}%`;
             },
         });
         return ffmpeg;
     }
     initFFmpeg();
+
+    /**
+     * Calculates new dimensions using some scale factor.
+     * @param {number} width
+     * @param {number} height
+     * @param {number} scale
+     * @returns
+     */
+    function calcDimensions(width, height, scale) {
+        const outWidth = Math.floor((width * scale) / 2) * 2;
+        const outHeight = Math.floor((height * scale) / 2) * 2;
+
+        return [outWidth, outHeight];
+    }
 
     /**
      * @param {File} file
@@ -80,8 +101,7 @@ function init() {
         if (!ffmpeg.isLoaded()) await ffmpeg.load();
 
         // Scaling code
-        const outWidth = Math.floor((w * scaleFactor) / 2) * 2;
-        const outHeight = Math.floor((h * scaleFactor) / 2) * 2;
+        const [outWidth, outHeight] = calcDimensions(w, h, scaleFactor);
 
         ffmpeg.FS("writeFile", file.name, await fetchFile(file));
         await ffmpeg.run(
@@ -143,7 +163,7 @@ function init() {
 
             videoIn.onresize = () => {
                 areaElt.style.display = "flex";
-                dragElement(areaElt, videoIn.videoWidth, videoIn.videoHeight);
+                createDragElement(areaElt, videoIn.videoWidth, videoIn.videoHeight);
                 progress.textContent = "";
                 cropBtn.disabled = false;
                 cropBtn.textContent = "Crop";
@@ -201,10 +221,24 @@ function init() {
                 scaleInput.oninput = () => {
                     const newValue = scaleInput.valueAsNumber;
                     if (newValue > 0) prevScale = newValue;
+
+                    const width = areaElt.offsetWidth;
+                    const height = areaElt.offsetHeight;
+                    const [outWidth, outHeight] = calcDimensions(width, height, newValue);
+                    outDim.textContent = `Output Dimensions: ${outWidth} x ${outHeight}`;
                 };
                 scaleInput.onblur = () => {
                     const newValue = scaleInput.valueAsNumber;
                     if (!newValue || newValue < 0) scaleInput.valueAsNumber = 0.1;
+
+                    const width = areaElt.offsetWidth;
+                    const height = areaElt.offsetHeight;
+                    const [outWidth, outHeight] = calcDimensions(
+                        width,
+                        height,
+                        scaleInput.valueAsNumber,
+                    );
+                    outDim.textContent = `Output Dimensions: ${outWidth} x ${outHeight}`;
                 };
 
                 function cancel() {
@@ -276,11 +310,12 @@ function init() {
     }
 
     /**
+     * Creates a draggable element.
      * @param {HTMLDivElement} elmnt
      * @param {number} cWidth the container's width
      * @param {number} cHeight the container's height
      */
-    function dragElement(elmnt, cWidth, cHeight) {
+    function createDragElement(elmnt, cWidth, cHeight) {
         var deltaX = 0,
             deltaY = 0,
             lastX = 0,
@@ -299,6 +334,8 @@ function init() {
         function dragMouseDown(e) {
             e = e || window.event;
 
+            // checks that mousedown is inside the
+            // resize corner padding for the element
             const padding = 20; // pixels
             if (
                 e.offsetX > elmnt.offsetWidth - padding &&
@@ -309,12 +346,14 @@ function init() {
             }
 
             e.preventDefault();
-            // get the mouse cursor position at startup:
+            // get the mouse cursor position at startup
             lastX = e.clientX;
             lastY = e.clientY;
+            elmnt.focus();
+
+            // call a function whenever the cursor moves
+            document.onmousemove = dragElement;
             document.onmouseup = closeDragElement;
-            // call a function whenever the cursor moves:
-            document.onmousemove = elementDrag;
         }
 
         moveArea = (elmnt, dx, dy) => {
@@ -334,22 +373,22 @@ function init() {
          *
          * @param {MouseEvent} e
          */
-        function elementDrag(e) {
+        function dragElement(e) {
             e = e || window.event;
             e.preventDefault();
 
-            // calculate the new cursor position:
+            // calculate the new cursor position
             deltaX = e.clientX - lastX;
             deltaY = e.clientY - lastY;
             lastX = e.clientX;
             lastY = e.clientY;
 
-            // set the element's new position:
+            // set the element's new position
             moveArea(elmnt, deltaX, deltaY);
         }
 
         function closeDragElement() {
-            // stop moving when mouse button is released:
+            // stop moving when mouse button is released
             document.onmouseup = null;
             document.onmousemove = null;
         }
