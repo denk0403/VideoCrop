@@ -16,7 +16,7 @@ function init() {
     /** @type {HTMLDivElement} */
     const errorMsg = document.getElementById("error-msg");
     /** @type {HTMLDivElement} */
-    const shareBtn = document.getElementById("share-icon");
+    const shareBtn = document.getElementById("share-btn");
     /** @type {HTMLDivElement} */
     const areaTxt = document.getElementById("area-txt");
     /** @type {HTMLInputElement} */
