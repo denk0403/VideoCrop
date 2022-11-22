@@ -1,272 +1,274 @@
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta name="keywords" content="video, crop, ffmpeg, offline, scale, trim, editor" />
-        <meta name="author" content="Dennis Kats" />
-        <meta name="description" content="A browser-based video cropping tool." />
-        <title>VideoCrop</title>
 
-        <link rel="icon" href="./icon.png" />
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="keywords" content="video, crop, ffmpeg, offline, scale, trim, editor, video editor" />
+    <meta name="author" content="Dennis Kats" />
+    <meta name="description" content="A browser-based video cropping tool." />
+    <title>VideoCrop</title>
 
-        <!-- Open Graph protocol support-->
-        <meta property="og:title" content="VideoCrop" />
-        <meta property="og:type" content="website" />
-        <meta property="og:description" content="A browser-based video cropping tool." />
+    <link rel="icon" href="./icon.png" />
 
-        <!-- Twitter Card support-->
-        <meta name="twitter:card" content="summary" />
+    <meta name="google-site-verification" content="4SPNAeJtR9gtR-1_euFZEA7IzHo6_KBoQXAvSpcgYgE" />
 
-        <script async src="./swWrapper.js"></script>
-        <script defer src="./ffmpeg.min.js"></script>
-        <script defer src="./index.js"></script>
-        <style>
-            body {
-                margin: 20px;
-                text-align: center;
-                background-color: lightcyan;
+    <!-- Open Graph protocol support-->
+    <meta property="og:title" content="VideoCrop" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="A browser-based video cropping tool." />
+
+    <!-- Twitter Card support-->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@denk0403" />
+    <meta name="twitter:creator" content="@denk0403" />
+
+    <script async src="./swWrapper.js"></script>
+    <script defer src="./ffmpeg.min.js"></script>
+    <script defer src="./index.js"></script>
+    <style>
+        body {
+            margin: 20px;
+            text-align: center;
+            background-color: lightcyan;
+        }
+
+        body>*:not(h1, h2, h3, h4, h5, h6) {
+            display: block;
+            margin: 10px 0;
+        }
+
+        #title {
+            font: bold 2.5rem "Gotham", serif;
+            margin-bottom: 0;
+        }
+
+        #author {
+            display: inline-block;
+            font-family: "Trebuchet MS";
+            font-size: small;
+            margin-bottom: 30px;
+        }
+
+        #author a {
+            color: blue;
+            display: inline-block;
+            transition: transform 0.25s linear;
+        }
+
+        #author a:hover {
+            color: rgb(0, 0, 169);
+            transform: scale(1.05, 1.05);
+        }
+
+        #description {
+            display: block;
+            max-width: 900px;
+            margin: 0 auto 20px;
+            font-family: "Trebuchet MS";
+        }
+
+        #input {
+            display: inline-block;
+        }
+
+        #error-msg {
+            margin-top: 5px;
+            color: red;
+            font-family: "Trebuchet MS";
+            transition: opacity 1s linear 4s;
+            opacity: 0;
+        }
+
+        #error-msg.show {
+            opacity: 100;
+            transition: none;
+        }
+
+        #bounds {
+            position: relative;
+            display: inline-block;
+        }
+
+        #area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50px;
+            height: 50px;
+            min-width: 50px;
+            min-height: 50px;
+            background-color: rgba(0, 0, 0, 0.33);
+            z-index: 1;
+            outline: dashed #949494 2.5px;
+            box-sizing: border-box;
+            resize: both;
+            overflow: auto;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            overflow-wrap: anywhere;
+            cursor: move;
+        }
+
+        #area:focus-within {
+            outline: revert;
+        }
+
+        #area-txt {
+            color: rgba(255, 255, 255, 0.2);
+            font: bold 1.05rem "Fire Sans", sans-serif;
+            transition: color 0.25s linear 1s;
+        }
+
+        #area:is(:hover, :focus) #area-txt {
+            color: white;
+            transition: color 0.25s linear;
+        }
+
+        #params {
+            margin: 10px;
+            display: inline-block;
+        }
+
+        .param {
+            margin: 5px;
+            display: block;
+        }
+
+        .param input {
+            width: 75px;
+        }
+
+        #crop-btn {
+            padding: 7px;
+            min-width: 75px;
+            background-color: snow;
+            border-radius: 5px;
+        }
+
+        #loader {
+            display: none;
+            border: 5px solid #f3f3f3;
+            animation: spin 1s linear infinite;
+            border-top: 5px solid #555;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            margin-left: 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
             }
 
-            body > *:not(h1, h2, h3, h4, h5, h6) {
-                display: block;
-                margin: 10px 0;
+            100% {
+                transform: rotate(360deg);
             }
+        }
 
-            #title {
-                font: bold 2.5rem "Gotham", serif;
-                margin-bottom: 0;
-            }
+        #progress {
+            margin-left: 7px;
+        }
 
-            #author {
-                display: inline-block;
-                font-family: "Trebuchet MS";
-                font-size: small;
-                margin-bottom: 30px;
-            }
+        #result-line * {
+            vertical-align: middle;
+        }
 
-            #author a {
-                color: blue;
-                display: inline-block;
-                transition: transform 0.25s linear;
-            }
+        #result-title {
+            margin: 7px;
+            display: inline-block;
+        }
 
-            #author a:hover {
-                color: rgb(0, 0, 169);
-                transform: scale(1.05, 1.05);
-            }
+        #share-btn {
+            fill: black;
+            background-color: rgb(235, 235, 235);
+            padding: 3px;
+            border-radius: 3px;
+            display: none;
+        }
 
-            #description {
-                display: block;
-                max-width: 900px;
-                margin: 0 auto 20px;
-                font-family: "Trebuchet MS";
-            }
+        #share-btn:hover {
+            fill: rgb(0, 123, 255);
+        }
 
-            #input {
-                display: inline-block;
-            }
+        #share-btn:active {
+            filter: brightness(0.9);
+        }
 
-            #error-msg {
-                margin-top: 5px;
-                color: red;
-                font-family: "Trebuchet MS";
-                transition: opacity 1s linear 4s;
-                opacity: 0;
-            }
+        #share-btn.show {
+            display: inline-block;
+        }
 
-            #error-msg.show {
-                opacity: 100;
-                transition: none;
-            }
+        #video-output {
+            display: none;
+        }
+    </style>
+</head>
 
-            #bounds {
-                position: relative;
-                display: inline-block;
-            }
+<body>
+    <h1 id="title">VideoCrop</h1>
 
-            #area {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 50px;
-                height: 50px;
-                min-width: 50px;
-                min-height: 50px;
-                background-color: rgba(0, 0, 0, 0.33);
-                z-index: 1;
-                outline: dashed #949494 2.5px;
-                box-sizing: border-box;
-                resize: both;
-                overflow: auto;
-                display: none;
-                justify-content: center;
-                align-items: center;
-                overflow-wrap: anywhere;
-                cursor: move;
-            }
+    <p id="author">
+        <span style="display: block">Made by <a href="https://github.com/denk0403">Dennis Kats</a>
+        </span>
+        <a href="https://github.com/denk0403/VideoCrop">View the source on GitHub</a>
+    </p>
 
-            #area:focus-within {
-                outline: revert;
-            }
-
-            #area-txt {
-                color: rgba(255, 255, 255, 0.2);
-                font: bold 1.05rem "Fire Sans", sans-serif;
-                transition: color 0.25s linear 1s;
-            }
-
-            #area:is(:hover, :focus) #area-txt {
-                color: white;
-                transition: color 0.25s linear;
-            }
-
-            #params {
-                margin: 10px;
-                display: inline-block;
-            }
-
-            .param {
-                margin: 5px;
-                display: block;
-            }
-
-            .param input {
-                width: 75px;
-            }
-
-            #crop-btn {
-                padding: 7px;
-                min-width: 75px;
-                background-color: snow;
-                border-radius: 5px;
-            }
-
-            #loader {
-                display: none;
-                border: 5px solid #f3f3f3;
-                animation: spin 1s linear infinite;
-                border-top: 5px solid #555;
-                border-radius: 50%;
-                width: 20px;
-                height: 20px;
-                vertical-align: middle;
-                margin-left: 15px;
-            }
-
-            @keyframes spin {
-                0% {
-                    transform: rotate(0deg);
-                }
-                100% {
-                    transform: rotate(360deg);
-                }
-            }
-
-            #progress {
-                margin-left: 7px;
-            }
-
-            #result-line * {
-                vertical-align: middle;
-            }
-
-            #result-title {
-                margin: 7px;
-                display: inline-block;
-            }
-
-            #share-btn {
-                fill: black;
-                background-color: rgb(235, 235, 235);
-                padding: 3px;
-                border-radius: 3px;
-                display: none;
-            }
-
-            #share-btn:hover {
-                fill: rgb(0, 123, 255);
-            }
-
-            #share-btn:active {
-                filter: brightness(0.9);
-            }
-
-            #share-btn.show {
-                display: inline-block;
-            }
-
-            #video-output {
-                display: none;
-            }
-        </style>
-    </head>
-    <body>
-        <h1 id="title">VideoCrop</h1>
-
-        <p id="author">
-            <span style="display: block"
-                >Made by <a href="https://github.com/denk0403">Dennis Kats</a>
-            </span>
-            <a href="https://github.com/denk0403/VideoCrop">View the source on GitHub</a>
-        </p>
-
-        <p id="description">
-            <span style="font-weight: bold">VideoCrop</span> is an offline, browser-based video
-            cropping tool built on top of
-            <span style="font-family: 'Courier New'; font-weight: bold">ffmpeg.wasm</span>. In fact,
-            VideoCrop will never upload or send anything to a server, and works even if you disable
-            your Wi-Fi. Start by clicking on the file input button or by dragging and dropping a
-            video file onto the page.
-        </p>
+    <p id="description">
+        <span style="font-weight: bold">VideoCrop</span> is an offline, browser-based video
+        cropping tool built on top of
+        <span style="font-family: 'Courier New'; font-weight: bold">ffmpeg.wasm</span>. In fact,
+        VideoCrop will never upload or send anything to a server, and works even if you disable
+        your Wi-Fi. Start by clicking on the file input button or by dragging and dropping a
+        video file onto the page.
+    </p>
+    <div>
+        <input type="file" id="input" accept="video/*" />
+        <div id="error-msg"></div>
+    </div>
+    <div>
         <div>
-            <input type="file" id="input" accept="video/*" />
-            <div id="error-msg"></div>
-        </div>
-        <div>
-            <div>
-                <div id="bounds">
-                    <div id="area" tabindex="0"><div id="area-txt"></div></div>
-                    <video id="video-input" controls></video>
+            <div id="bounds">
+                <div id="area" tabindex="0">
+                    <div id="area-txt"></div>
                 </div>
+                <video id="video-input" controls></video>
             </div>
-            <div id="params">
-                <div class="param">
-                    Trim:
-                    <input id="start-time" type="number" min="0" step="0.01" disabled />
-                    —
-                    <input id="end-time" type="number" min="1" step="0.01" disabled />
-                </div>
-                <label class="param scale">
-                    Scale:
-                    <input id="scale" type="number" min="0.1" step="0.1" disabled />
-                </label>
+        </div>
+        <div id="params">
+            <div class="param">
+                Trim:
+                <input id="start-time" type="number" min="0" step="0.01" disabled />
+                —
+                <input id="end-time" type="number" min="1" step="0.01" disabled />
             </div>
-            <div id="out-dim"></div>
+            <label class="param scale">
+                Scale:
+                <input id="scale" type="number" min="0.1" step="0.1" disabled />
+            </label>
         </div>
-        <div>
-            <button disabled id="crop-btn">Crop</button>
-            <div id="loader"></div>
-            <span id="progress"></span>
-        </div>
-        <div style="border: 1px solid darkgray; margin: 20px 0"></div>
-        <div id="result-line">
-            <h2 id="result-title">Result</h2>
-            <button id="share-btn" aria-label="Share Button">
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    x="0px"
-                    y="0px"
-                    width="25"
-                    height="25"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        d="M 16.707031 2.2929688 L 15.292969 3.7070312 L 17.585938 6 L 17 6 C 10.936593 6 6 10.936593 6 17 L 6 18 L 8 18 L 8 17 C 8 12.017407 12.017407 8 17 8 L 17.585938 8 L 15.292969 10.292969 L 16.707031 11.707031 L 21.414062 7 L 16.707031 2.2929688 z M 2 8 L 2 9 L 2 19 C 2 20.64497 3.3550302 22 5 22 L 19 22 C 20.64497 22 22 20.64497 22 19 L 22 18 L 22 17 L 20 17 L 20 18 L 20 19 C 20 19.56503 19.56503 20 19 20 L 5 20 C 4.4349698 20 4 19.56503 4 19 L 4 9 L 4 8 L 2 8 z"
-                    ></path>
-                </svg>
-            </button>
-        </div>
-        <video id="video-output" controls></video>
-    </body>
+        <div id="out-dim"></div>
+    </div>
+    <div>
+        <button disabled id="crop-btn">Crop</button>
+        <div id="loader"></div>
+        <span id="progress"></span>
+    </div>
+    <div style="border: 1px solid darkgray; margin: 20px 0"></div>
+    <div id="result-line">
+        <h2 id="result-title">Result</h2>
+        <button id="share-btn" aria-label="Share Button">
+            <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="25" height="25" viewBox="0 0 24 24">
+                <path
+                    d="M 16.707031 2.2929688 L 15.292969 3.7070312 L 17.585938 6 L 17 6 C 10.936593 6 6 10.936593 6 17 L 6 18 L 8 18 L 8 17 C 8 12.017407 12.017407 8 17 8 L 17.585938 8 L 15.292969 10.292969 L 16.707031 11.707031 L 21.414062 7 L 16.707031 2.2929688 z M 2 8 L 2 9 L 2 19 C 2 20.64497 3.3550302 22 5 22 L 19 22 C 20.64497 22 22 20.64497 22 19 L 22 18 L 22 17 L 20 17 L 20 18 L 20 19 C 20 19.56503 19.56503 20 19 20 L 5 20 C 4.4349698 20 4 19.56503 4 19 L 4 9 L 4 8 L 2 8 z">
+                </path>
+            </svg>
+        </button>
+    </div>
+    <video id="video-output" controls></video>
+</body>
+
 </html>
