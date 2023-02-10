@@ -16,7 +16,11 @@ function init() {
     /** @type {HTMLDivElement} */
     const errorMsg = document.getElementById("error-msg");
     /** @type {HTMLDivElement} */
+    const resultBtnGroup = document.getElementById("result-btn-group");
+    /** @type {HTMLDivElement} */
     const shareBtn = document.getElementById("share-btn");
+    /** @type {HTMLAnchorElement} */
+    const downloadBtn = document.getElementById("download-btn");
     /** @type {HTMLDivElement} */
     const areaTxt = document.getElementById("area-txt");
     /** @type {HTMLInputElement} */
@@ -38,7 +42,6 @@ function init() {
         clearError();
         errorMsg.textContent = msg;
         errorMsg.classList.add("show");
-        setTimeout(() => errorMsg.classList.remove("show"), 0);
         errorTimer = setTimeout(clearError, ERROR_DURATION);
     }
 
@@ -46,10 +49,13 @@ function init() {
     function clearError() {
         clearTimeout(errorTimer);
         errorTimer = undefined;
-        errorMsg.textContent = "\n";
+        errorMsg.classList.remove("show");
+        errorMsg.textContent = "";
     }
 
     new ResizeObserver(() => {
+        if (!scaleInput.valueAsNumber) return;
+
         const width = areaElt.offsetWidth;
         const height = areaElt.offsetHeight;
         areaTxt.textContent = `${width} x ${height}`;
@@ -57,13 +63,19 @@ function init() {
         outDim.textContent = `Output Dimensions: ${outWidth} x ${outHeight}`;
     }).observe(areaElt);
 
+    videoOut.onloadeddata = () => {
+        resultBtnGroup.style.visibility = "visible";
+        videoOut.style.display = "inline-block";
+        videoOut.scrollIntoView({ behavior: "smooth" });
+    };
+
     const { createFFmpeg, fetchFile } = FFmpeg;
 
     let ffmpeg;
     function initFFmpeg() {
         ffmpeg = createFFmpeg({
             // corePath: "./ffmpeg-core/ffmpeg-core.js",
-            corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js",
+            corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
             progress: ({ ratio }) => {
                 const clampedRatio = clamp(0, ratio, 100);
                 progress.textContent = `${(clampedRatio * 100).toFixed(2)}%`;
@@ -118,15 +130,15 @@ function init() {
         const data = ffmpeg.FS("readFile", "output.mp4");
 
         if (videoOut.src) URL.revokeObjectURL(videoOut.src);
-        videoOut.onresize = () => {
-            videoOut.style.display = "inline-block";
-            videoOut.scrollIntoView({ behavior: "smooth" });
-        };
 
         const objURL = URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }));
         videoOut.src = objURL;
+        downloadBtn.href = objURL;
+        downloadBtn.download = file.name.trim().replace(/\.[^/.]+$/, "") + " cropped.mp4";
 
-        await fetch(objURL)
+        if (!navigator.canShare) return;
+
+        fetch(objURL)
             .then((res) => res.blob())
             .then((blob) => {
                 const shareData = {
@@ -134,13 +146,13 @@ function init() {
                     text: `Cropped using ${location.href}`,
                 };
 
-                if (navigator.canShare?.(shareData)) {
-                    shareBtn.classList.add("show");
+                if (navigator.canShare(shareData)) {
+                    shareBtn.style.display = "inline";
                     shareBtn.onclick = () => {
                         navigator.share(shareData);
                     };
                 } else {
-                    shareBtn.classList.remove("show");
+                    shareBtn.style.display = "none";
                     shareBtn.onclick = undefined;
                 }
             })
@@ -421,7 +433,7 @@ function init() {
         if (event.metaKey) shift = 10;
         if (event.shiftKey && event.metaKey) shift = 25;
 
-        if (event.ctrlKey) {
+        if (event.ctrlKey && event.ctrlKey) {
             if (event.key === "ArrowUp") {
                 event.preventDefault();
                 areaElt.style.height = areaElt.offsetHeight - shift;

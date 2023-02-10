@@ -1,68 +1,73 @@
-const CACHE_NAME = "videocrop";
+const CACHE_NAME = "videocrop-v1";
 const urlsToCache = [
     "/",
     "/index.js",
     "/ffmpeg.min.js",
-    "/serviceWorker.js",
     "/swWrapper.js",
-    // "/ffmpeg-core/ffmpeg-core.worker.js",
-    // "/ffmpeg-core/ffmpeg-core.js",
-    // "/ffmpeg-core/ffmpeg-core.wasm",
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.0/dist/ffmpeg-core.wasm",
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js",
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.0/dist/ffmpeg-core.worker.js",
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm",
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.worker.js",
 ];
 
 // Install a service worker
 self.addEventListener("install", (event) => {
     self.skipWaiting();
 
-    // Perform install steps
+    // Precache assets on install
     event.waitUntil(
-        caches.open(CACHE_NAME).then(function (cache) {
-            console.log(`Opened cache: ${CACHE_NAME}`);
+        caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(urlsToCache);
         }),
     );
 });
 
-// Cache and return requests
-self.addEventListener("fetch", async (event) => {
-    const req = event.request;
-    event.respondWith(tryNetwork(req).catch(() => fallbackToCache(req)));
-});
-
-/**
- * Attempts retrieving the given resource from the network, and stores the result in cache.
- */
-async function tryNetwork(req) {
-    return fetch(req).then((res) =>
-        // Store in cache on success
-        caches.open(CACHE_NAME).then((cache) => {
-            cache.put(req.url, res.clone());
-            return res;
-        }),
-    );
-}
-/**
- * Fallback to cache; retrieves the resource from cache if available.
- */
-async function fallbackToCache(req) {
-    return caches.match(req);
-}
-
-// Update a service worker
+// Allow service worker to control current page on next load
 self.addEventListener("activate", (event) => {
-    var cacheWhitelist = [CACHE_NAME];
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheWhitelist.indexOf(cacheName) === -1) {
-                        return caches.delete(cacheName);
-                    }
-                }),
-            );
-        }),
-    );
+    console.log("Activating new service worker");
+    event.waitUntil(clients.claim());
 });
+
+// Intercepts when the browser fetches a URL to check cache
+self.addEventListener("fetch", (event) => event.respondWith(cacheFirst(event.request)));
+
+// Returns a match from the cache first, only making a network request if necessary
+async function cacheFirst(req) {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(req);
+    return cached ?? networkAndCache(cache, req);
+}
+
+// Makes the network request immediately if possible,
+// and saves the result in cache for future offline use
+async function networkAndCache(cache, req) {
+    try {
+        const fresh = await fetch(req);
+        await cache.put(req, fresh.clone()); // must clone before use
+        return fresh;
+    } catch (e) {
+        console.error(e);
+        return;
+    }
+}
+
+// // Intercepts when the browser fetches a URL to use network first, then check cache
+// self.addEventListener("fetch", (event) => event.respondWith(networkFirst(event.request)));
+
+// // Makes the network request immediately if possible,
+// // and saves the result in cache for future offline use
+// async function networkFirst(req) {
+//     const cache = await caches.open(CACHE_NAME);
+//     try {
+//         const fresh = await fetch(req);
+//         await cache.put(req, fresh.clone()); // must clone before result is used
+//         return fresh;
+//     } catch (err) {
+//         console.error(err);
+//         return fallbackToCache(cache, req);
+//     }
+// }
+
+// // Fallback to cache; retrieves the resource from cache if available.
+// function fallbackToCache(cache, req) {
+//     return cache.match(req);
+// }

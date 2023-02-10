@@ -1,15 +1,19 @@
 {
-    "version": 2,
-    "builds": [
+    "cleanUrls": true,
+    "outputDirectory": "public",
+    "headers": [
         {
-            "src": "./index.js",
-            "use": "@vercel/node"
-        }
-    ],
-    "routes": [
-        {
-            "src": "/(.*)",
-            "dest": "/"
+            "source": "/(.*)",
+            "headers": [
+                {
+                    "key": "Cross-Origin-Opener-Policy",
+                    "value": "same-origin"
+                },
+                {
+                    "key": "Cross-Origin-Embedder-Policy",
+                    "value": "require-corp"
+                }
+            ]
         }
     ]
 }
