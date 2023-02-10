@@ -1,0 +1,8 @@
+# run with `zsh .scripts <function_name>`
+# or with alias `run <function_name>`
+
+start() {
+    vercel dev
+}
+
+if [ -z $@ ]; then start; else "$@"; fi
