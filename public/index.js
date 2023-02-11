@@ -63,7 +63,11 @@ function init() {
         outDim.textContent = `Output Dimensions: ${outWidth} x ${outHeight}`;
     }).observe(areaElt);
 
-    videoOut.onloadeddata = () => {
+    /**
+     * Must use onresize because the "resize" event will always fire when a video src has successfully changed.
+     * onloadeddata will not fire in mobile/tablet devices if data-saver is on in browser settings.
+     */
+    videoOut.onresize = () => {
         resultBtnGroup.style.visibility = "visible";
         videoOut.style.display = "inline-block";
         videoOut.scrollIntoView({ behavior: "smooth" });
@@ -333,6 +337,7 @@ function init() {
             lastX = 0,
             lastY = 0;
         elmnt.onmousedown = dragMouseDown;
+        elmnt.ontouchstart = dragMouseDown;
 
         elmnt.style.left = 0;
         elmnt.style.top = 0;
@@ -341,17 +346,24 @@ function init() {
 
         /**
          *
-         * @param {MouseEvent} e
+         * @param {MouseEvent | TouchEvent} e
          */
         function dragMouseDown(e) {
-            e = e || window.event;
+            /** @type {MouseEvent | Touch} */
+            let interaction = e;
+
+            if (e.type.includes("touch")) {
+                /** @type {TouchEvent} */
+                const touchEvent = e;
+                interaction = touchEvent.targetTouches[0];
+            }
 
             // checks that mousedown is inside the
             // resize corner padding for the element
             const padding = 20; // pixels
             if (
-                e.offsetX > elmnt.offsetWidth - padding &&
-                e.offsetY > elmnt.offsetHeight - padding
+                interaction.offsetX > elmnt.offsetWidth - padding &&
+                interaction.offsetY > elmnt.offsetHeight - padding
             ) {
                 // allow resizing
                 return;
@@ -359,13 +371,15 @@ function init() {
 
             e.preventDefault();
             // get the mouse cursor position at startup
-            lastX = e.clientX;
-            lastY = e.clientY;
+            lastX = interaction.clientX;
+            lastY = interaction.clientY;
             elmnt.focus();
 
             // call a function whenever the cursor moves
             document.onmousemove = dragElement;
+            document.ontouchmove = dragElement;
             document.onmouseup = closeDragElement;
+            document.ontouchend = closeDragElement;
         }
 
         moveArea = (elmnt, dx, dy) => {
@@ -383,17 +397,25 @@ function init() {
 
         /**
          *
-         * @param {MouseEvent} e
+         * @param {MouseEvent | TouchEvent} e
          */
         function dragElement(e) {
-            e = e || window.event;
+            /** @type {MouseEvent | Touch} */
+            let interaction = e;
+
+            if (e.type.includes("touch")) {
+                /** @type {TouchEvent} */
+                const touchEvent = e;
+                interaction = touchEvent.targetTouches[0];
+            }
+
             e.preventDefault();
 
             // calculate the new cursor position
-            deltaX = e.clientX - lastX;
-            deltaY = e.clientY - lastY;
-            lastX = e.clientX;
-            lastY = e.clientY;
+            deltaX = interaction.clientX - lastX;
+            deltaY = interaction.clientY - lastY;
+            lastX = interaction.clientX;
+            lastY = interaction.clientY;
 
             // set the element's new position
             moveArea(elmnt, deltaX, deltaY);
@@ -401,8 +423,10 @@ function init() {
 
         function closeDragElement() {
             // stop moving when mouse button is released
-            document.onmouseup = null;
             document.onmousemove = null;
+            document.ontouchmove = null;
+            document.onmouseup = null;
+            document.ontouchend = null;
         }
     }
 

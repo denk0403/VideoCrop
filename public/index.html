@@ -23,7 +23,7 @@
     <meta name="twitter:site" content="@denk0403" />
     <meta name="twitter:creator" content="@denk0403" />
 
-    <script async src="./swWrapper.js"></script>
+    <!-- <script async src="./swWrapper.js"></script> -->
     <!-- https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js -->
     <script defer src="./ffmpeg.min.js"></script>
     <script defer src="./index.js"></script>
@@ -33,7 +33,7 @@
         }
 
         body {
-            margin: 20px 0;
+            margin: 20px;
             text-align: center;
             background-color: lightcyan;
         }
@@ -104,7 +104,7 @@
             min-width: 50px;
             min-height: 50px;
             background-color: rgba(0, 0, 0, 0.33);
-            z-index: 1;
+            z-index: 10;
             outline: dashed #949494 2.5px;
             box-sizing: border-box;
             resize: both;
@@ -114,6 +114,9 @@
             align-items: center;
             overflow-wrap: anywhere;
             cursor: move;
+
+            /* prevents default behavior on mobile (scrolling) */
+            touch-action: none;
         }
 
         #area:focus-within {
@@ -293,7 +296,7 @@
                 <div id="area" tabindex="0">
                     <div id="area-txt"></div>
                 </div>
-                <video id="video-input" controls></video>
+                <video id="video-input" controls preload="auto"></video>
             </div>
         </div>
         <div id="params">
@@ -338,7 +341,7 @@
             </a>
         </div>
     </div>
-    <video id="video-output" controls></video>
+    <video id="video-output" controls preload="auto"></video>
 </body>
 
 </html>
