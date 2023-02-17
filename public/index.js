@@ -1,4 +1,5 @@
-function init() {
+"use strict";
+{
     /** @type {HTMLInputElement} */
     const inputHtml = document.getElementById("input");
     /** @type {HTMLVideoElement} */
@@ -178,7 +179,10 @@ function init() {
             videoIn.src = URL.createObjectURL(new Blob([fr.result], { type: "video/mp4" }));
 
             videoIn.onresize = () => {
+                const videoInBox = videoIn.getBoundingClientRect();
                 areaElt.style.display = "flex";
+                areaElt.style.width = `${videoInBox.width / 3}px`;
+                areaElt.style.height = `${videoInBox.height / 3}px`;
                 createDragElement(areaElt, videoIn.videoWidth, videoIn.videoHeight);
                 progress.textContent = "";
                 cropBtn.disabled = false;
@@ -384,10 +388,10 @@ function init() {
 
         moveArea = (elmnt, dx, dy) => {
             // set the element's new position:
-            elmnt.offsetWidth = clamp(0, elmnt.style.width, cWidth - elmnt.offsetLeft);
-            elmnt.offsetHeight = clamp(0, elmnt.style.height, cHeight - elmnt.offsetTop);
-            elmnt.style.width = elmnt.offsetWidth;
-            elmnt.style.height = elmnt.offsetHeight;
+            const newWidth = clamp(0, elmnt.style.width, cWidth - elmnt.offsetLeft);
+            const newHeight = clamp(0, elmnt.style.height, cHeight - elmnt.offsetTop);
+            elmnt.style.width = newWidth;
+            elmnt.style.height = newHeight;
 
             elmnt.style.top = clamp(0, elmnt.offsetTop + dy, cHeight - elmnt.offsetHeight) + "px";
             elmnt.style.left = clamp(0, elmnt.offsetLeft + dx, cWidth - elmnt.offsetWidth) + "px";
@@ -531,4 +535,14 @@ function toRange(num) {
     return num.toFixed(2);
 }
 
-document.addEventListener("DOMContentLoaded", init, { once: true });
+function unregisterServiceWorker() {
+    navigator.serviceWorker
+        ?.getRegistrations()
+        .then((registrations) => {
+            console.log(registrations);
+            registrations.map((reg) => reg.unregister());
+        })
+        .catch((err) => {
+            console.error(err);
+        });
+}

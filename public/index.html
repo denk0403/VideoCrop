@@ -23,7 +23,12 @@
     <meta name="twitter:site" content="@denk0403" />
     <meta name="twitter:creator" content="@denk0403" />
 
-    <!-- <script async src="./swWrapper.js"></script> -->
+    <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js" />
+    <link rel="preload" as="script"
+        href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.worker.js" />
+    <link rel="preload" as="fetch" href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm" />
+
+    <script async src="./swWrapper.js"></script>
     <!-- https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js -->
     <script defer src="./ffmpeg.min.js"></script>
     <script defer src="./index.js"></script>
@@ -99,8 +104,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 50px;
-            height: 50px;
+            /* width: 50px;
+            height: 50px; */
             min-width: 50px;
             min-height: 50px;
             background-color: rgba(0, 0, 0, 0.33);
