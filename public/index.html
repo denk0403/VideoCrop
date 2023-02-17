@@ -32,6 +32,7 @@
     <!-- https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js -->
     <script defer src="./ffmpeg.min.js"></script>
     <script defer src="./index.js"></script>
+    <script defer src="area-selector.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -137,6 +138,10 @@
         #area:is(:hover, :focus) #area-txt {
             color: white;
             transition: color 0.25s linear;
+        }
+
+        #video-input {
+            outline: 1px solid black;
         }
 
         #params {
@@ -298,6 +303,7 @@
     <div>
         <div>
             <div id="bounds">
+                <area-selector></area-selector>
                 <div id="area" tabindex="0">
                     <div id="area-txt"></div>
                 </div>
