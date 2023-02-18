@@ -75,13 +75,11 @@
         }
         /** @type {number} */
         get x() {
-            const parentXOffset = this.#parentBox.x;
-            return parentXOffset - this.#box.x;
+            return this.#parentBox.x - this.#box.x;
         }
         /** @type {number} */
         get y() {
-            const parentXOffset = this.#parentBox.y;
-            return parentXOffset - this.#box.y;
+            return this.#parentBox.y - this.#box.y;
         }
 
         /** @type {HTMLElement} */
@@ -115,166 +113,219 @@
         }
 
         #makeResizable() {
+            let startX, // horizontal position on page
+                startY, // vertical position on page
+                startLeft, // distance to parent's left edge (relative x-offset)
+                startTop, // distance to parent's top edge (relative y-offset)
+                startRight, // distance to parent's right edge
+                startBottom, // distance to parent's bottom edge
+                startWidth,
+                startHeight,
+                startMouseX,
+                startMouseY;
+
+            /** @param {MouseEvent | Touch} e */
+            const assignStartingValues = (e) => {
+                const parentBox = this.#parentBox;
+                const boundingBox = this.#box;
+                startX = boundingBox.x;
+                startY = boundingBox.y;
+                startWidth = boundingBox.width;
+                startHeight = boundingBox.height;
+                startLeft = startX - parentBox.x;
+                startTop = startY - parentBox.y;
+                startRight = parentBox.width - (startLeft + startWidth);
+                startBottom = parentBox.height - (startTop + startHeight);
+                startMouseX = e.pageX;
+                startMouseY = e.pageY;
+            };
+
             const clamp = (min, val, max) => Math.min(Math.max(val, min), max);
 
             /** @type {NodeListOf<HTMLElement>} */
             const resizers = this.#r.querySelectorAll(".resizer");
             for (const resizer of resizers) {
-                let startX, // horizontal position on page
-                    startY, // vertical position on page
-                    startLeft, // distance to parent's left edge (relative x-offset)
-                    startTop, // distance to parent's top edge (relative y-offset)
-                    startRight, // distance to parent's right edge
-                    startBottom, // distance to parent's bottom edge
-                    startWidth,
-                    startHeight,
-                    startMouseX,
-                    startMouseY;
+                /** @param {MouseEvent | Touch} e */
+                const resize = (e) => {
+                    switch (resizer.id) {
+                        case "bottom-right": {
+                            // horizontal movement
+                            const movementX = e.pageX - startMouseX;
+                            const newWidth = clamp(
+                                MIN_SIZE,
+                                startWidth + movementX,
+                                startWidth + startRight,
+                            );
+                            this.style.width = newWidth + "px";
+
+                            // vertical movement
+                            const movementY = e.pageY - startMouseY;
+                            const newHeight = clamp(
+                                MIN_SIZE,
+                                startHeight + movementY,
+                                startHeight + startBottom,
+                            );
+                            this.style.height = newHeight + "px";
+                            break;
+                        }
+                        case "bottom-left": {
+                            // horizontal movement
+                            const movementX = e.pageX - startMouseX;
+                            const xShift = clamp(-startLeft, movementX, startWidth - MIN_SIZE);
+                            const newWidth = startWidth - xShift;
+                            const newLeft = startLeft + xShift;
+                            this.style.width = newWidth + "px";
+                            this.style.left = newLeft + "px";
+
+                            // vertical movement
+                            const movementY = e.pageY - startMouseY;
+                            const newHeight = clamp(
+                                MIN_SIZE,
+                                startHeight + movementY,
+                                startHeight + startBottom,
+                            );
+                            this.style.height = newHeight + "px";
+                            break;
+                        }
+                        case "top-right": {
+                            // horizontal movement
+                            const movementX = e.pageX - startMouseX;
+                            const newWidth = clamp(
+                                MIN_SIZE,
+                                startWidth + movementX,
+                                startWidth + startRight,
+                            );
+                            this.style.width = newWidth + "px";
+
+                            // vertical movement
+                            const movementY = e.pageY - startMouseY;
+                            const yShift = clamp(-startTop, movementY, startHeight - MIN_SIZE);
+                            const newHeight = startHeight - yShift;
+                            const newTop = startTop + yShift;
+
+                            this.style.height = newHeight + "px";
+                            this.style.top = newTop + "px";
+                            break;
+                        }
+                        case "top-left": {
+                            // horizontal movement
+                            const movementX = e.pageX - startMouseX;
+                            const xShift = clamp(-startLeft, movementX, startWidth - MIN_SIZE);
+                            const newWidth = startWidth - xShift;
+                            const newLeft = startLeft + xShift;
+                            this.style.width = newWidth + "px";
+                            this.style.left = newLeft + "px";
+
+                            // vertical movement
+                            const movementY = e.pageY - startMouseY;
+                            const yShift = clamp(-startTop, movementY, startHeight - MIN_SIZE);
+                            const newHeight = startHeight - yShift;
+                            const newTop = startTop + yShift;
+                            this.style.height = newHeight + "px";
+                            this.style.top = newTop + "px";
+                            break;
+                        }
+                    }
+                };
+
+                /** @param {TouchEvent} e */
+                const touchResize = (e) => {
+                    const touch = e.targetTouches[0];
+                    resize(touch);
+                };
 
                 resizer.addEventListener("mousedown", (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
 
-                    const parentBox = this.#parentBox;
-                    const boundingBox = this.#box;
-                    startX = boundingBox.x;
-                    startY = boundingBox.y;
-                    startWidth = boundingBox.width;
-                    startHeight = boundingBox.height;
-                    startLeft = startX - parentBox.x;
-                    startTop = startY - parentBox.y;
-                    startRight = parentBox.width - (startLeft + startWidth);
-                    startBottom = parentBox.height - (startTop + startHeight);
-                    startMouseX = e.pageX;
-                    startMouseY = e.pageY;
+                    assignStartingValues(e);
 
                     window.addEventListener("mousemove", resize);
                     window.addEventListener("mouseup", () =>
-                        window.removeEventListener("mousemove", touchResize),
+                        window.removeEventListener("mousemove", resize),
                     );
                 });
 
                 resizer.addEventListener("touchstart", (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
 
-                    const parentBox = this.#parentBox;
-                    const boundingBox = this.#box;
-                    startX = boundingBox.x;
-                    startY = boundingBox.y;
-                    startWidth = boundingBox.width;
-                    startHeight = boundingBox.height;
-                    startLeft = startX - parentBox.x;
-                    startTop = startY - parentBox.y;
-                    startRight = parentBox.width - (startLeft + startWidth);
-                    startBottom = parentBox.height - (startTop + startHeight);
-                    startMouseX = e.pageX;
-                    startMouseY = e.pageY;
+                    const touch = e.targetTouches[0];
+                    assignStartingValues(touch);
 
                     window.addEventListener("touchmove", touchResize);
                     window.addEventListener("touchend", () =>
                         window.removeEventListener("touchmove", touchResize),
                     );
                 });
-
-                /**
-                 * @param {MouseEvent | Touch} e
-                 */
-                const resize = (e) => {
-                    if (resizer.id === "bottom-right") {
-                        // horizontal movement
-                        const movementX = e.pageX - startMouseX;
-                        const newWidth = clamp(
-                            MIN_SIZE,
-                            startWidth + movementX,
-                            startWidth + startRight,
-                        );
-                        this.style.width = newWidth + "px";
-
-                        // vertical movement
-                        const movementY = e.pageY - startMouseY;
-                        const newHeight = clamp(
-                            MIN_SIZE,
-                            startHeight + movementY,
-                            startHeight + startBottom,
-                        );
-                        this.style.height = newHeight + "px";
-                    } else if (resizer.id === "bottom-left") {
-                        // horizontal movement
-                        const movementX = e.pageX - startMouseX;
-                        const xShift = clamp(-startLeft, movementX, startWidth - MIN_SIZE);
-                        const newWidth = startWidth - xShift;
-                        const newLeft = startLeft + xShift;
-                        this.style.width = newWidth + "px";
-                        this.style.left = newLeft + "px";
-
-                        // vertical movement
-                        const movementY = e.pageY - startMouseY;
-                        const newHeight = clamp(
-                            MIN_SIZE,
-                            startHeight + movementY,
-                            startHeight + startBottom,
-                        );
-                        this.style.height = newHeight + "px";
-                    } else if (resizer.id === "top-right") {
-                        // horizontal movement
-                        const movementX = e.pageX - startMouseX;
-                        const newWidth = clamp(
-                            MIN_SIZE,
-                            startWidth + movementX,
-                            startWidth + startRight,
-                        );
-                        this.style.width = newWidth + "px";
-
-                        // vertical movement
-                        const movementY = e.pageY - startMouseY;
-                        const yShift = clamp(-startTop, movementY, startHeight - MIN_SIZE);
-                        const newHeight = startHeight - yShift;
-                        const newTop = startTop + yShift;
-
-                        this.style.height = newHeight + "px";
-                        this.style.top = newTop + "px";
-                    } else {
-                        // horizontal movement
-                        const movementX = e.pageX - startMouseX;
-                        const xShift = clamp(-startLeft, movementX, startWidth - MIN_SIZE);
-                        const newWidth = startWidth - xShift;
-                        const newLeft = startLeft + xShift;
-                        this.style.width = newWidth + "px";
-                        this.style.left = newLeft + "px";
-
-                        // vertical movement
-                        const movementY = e.pageY - startMouseY;
-                        const yShift = clamp(-startTop, movementY, startHeight - MIN_SIZE);
-                        const newHeight = startHeight - yShift;
-                        const newTop = startTop + yShift;
-                        this.style.height = newHeight + "px";
-                        this.style.top = newTop + "px";
-                    }
-                };
-
-                /**
-                 * @param {TouchEvent} e
-                 */
-                const touchResize = (e) => {
-                    const touch = e.targetTouches[0];
-                    resize(touch);
-                };
             }
         }
 
-        #makeDraggable() {}
+        #makeDraggable() {
+            let startLeft, // distance to parent's left edge (relative x-offset)
+                startTop, // distance to parent's top edge (relative y-offset)
+                startRight, // distance to parent's right edge
+                startBottom, // distance to parent's bottom edge
+                startWidth,
+                startHeight,
+                startMouseX,
+                startMouseY;
 
-        #isNewSizeWithinParent(newX, newY, newWidth, newHeight) {
-            return true;
-            const parentBox = this.#parentBox;
-            return (
-                newX >= 0 &&
-                newY >= 0 &&
-                newX + newWidth <= parentBox.width &&
-                newY + newHeight <= parentBox.height
-            );
+            /** @param {MouseEvent | Touch} e */
+            const assignStartingValues = (e) => {
+                const parentBox = this.#parentBox;
+                const boundingBox = this.#box;
+                startWidth = boundingBox.width;
+                startHeight = boundingBox.height;
+                startLeft = boundingBox.x - parentBox.x;
+                startTop = boundingBox.y - parentBox.y;
+                startRight = parentBox.width - (startLeft + startWidth);
+                startBottom = parentBox.height - (startTop + startHeight);
+                startMouseX = e.pageX;
+                startMouseY = e.pageY;
+            };
+
+            const clamp = (min, val, max) => Math.min(Math.max(val, min), max);
+
+            /** @param {MouseEvent | Touch} e */
+            const translate = (e) => {
+                const movementX = e.pageX - startMouseX;
+                const movementY = e.pageY - startMouseY;
+
+                this.style.left = clamp(0, startLeft + movementX, startLeft + startRight);
+                this.style.top = clamp(0, startTop + movementY, startTop + startBottom);
+            };
+
+            /** @param {TouchEvent} e */
+            const touchTranslate = (e) => {
+                const touch = e.targetTouches[0];
+                translate(touch);
+            };
+
+            this.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                assignStartingValues(e);
+
+                window.addEventListener("mousemove", translate);
+                window.addEventListener("mouseup", () =>
+                    window.removeEventListener("mousemove", translate),
+                );
+            });
+            this.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const touch = e.targetTouches[0];
+                assignStartingValues(touch);
+
+                window.addEventListener("touchmove", touchTranslate);
+                window.addEventListener("touchend", () =>
+                    window.removeEventListener("touchmove", touchTranslate),
+                );
+            });
         }
-
-        #clampBoxToParent(newX, newY, newWidth, newHeight) {}
     }
 
     customElements.define("area-selector", AreaSelector);
