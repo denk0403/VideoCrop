@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -23,225 +24,18 @@
     <meta name="twitter:site" content="@denk0403" />
     <meta name="twitter:creator" content="@denk0403" />
 
+    <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js" />
+    <link rel="preload" as="script"
+        href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.worker.js" />
+    <link rel="preload" as="fetch" href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm" />
+
+    <link rel="stylesheet" href="styles.css">
+
     <script async src="./swWrapper.js"></script>
     <!-- https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js -->
     <script defer src="./ffmpeg.min.js"></script>
+    <script type="module" src="area-selector.mjs"></script>
     <script defer src="./index.js"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 20px 0;
-            text-align: center;
-            background-color: lightcyan;
-        }
-
-        body>*:not(h1, h2, h3, h4, h5, h6) {
-            display: block;
-            margin: 10px 0;
-        }
-
-        #title {
-            font: bold 2.5rem "Gotham", serif;
-            margin-bottom: 0;
-        }
-
-        #author {
-            display: inline-block;
-            font-family: "Trebuchet MS";
-            font-size: small;
-            margin-bottom: 30px;
-        }
-
-        #author a {
-            color: blue;
-            display: inline-block;
-            transition: transform 0.25s linear;
-        }
-
-        #author a:hover {
-            color: rgb(0, 0, 169);
-            transform: scale(1.05, 1.05);
-        }
-
-        #description {
-            display: block;
-            margin: 0 auto 20px;
-            font-family: "Trebuchet MS";
-        }
-
-        #input {
-            display: inline-block;
-        }
-
-        #error-msg {
-            margin-top: 5px;
-            color: red;
-            font-family: "Trebuchet MS";
-            transition: opacity 1s linear 4s;
-            opacity: 100;
-            visibility: hidden;
-        }
-
-        #error-msg.show {
-            opacity: 0;
-            visibility: visible;
-        }
-
-        #bounds {
-            position: relative;
-            display: inline-block;
-        }
-
-        #area {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 50px;
-            height: 50px;
-            min-width: 50px;
-            min-height: 50px;
-            background-color: rgba(0, 0, 0, 0.33);
-            z-index: 1;
-            outline: dashed #949494 2.5px;
-            box-sizing: border-box;
-            resize: both;
-            overflow: auto;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            overflow-wrap: anywhere;
-            cursor: move;
-        }
-
-        #area:focus-within {
-            outline: revert;
-        }
-
-        #area-txt {
-            color: rgba(255, 255, 255, 0.2);
-            font: bold 1.05rem "Fire Sans", sans-serif;
-            transition: color 0.25s linear 1s;
-        }
-
-        #area:is(:hover, :focus) #area-txt {
-            color: white;
-            transition: color 0.25s linear;
-        }
-
-        #params {
-            margin: 10px;
-            display: inline-block;
-        }
-
-        .param {
-            margin: 5px;
-            display: block;
-        }
-
-        .param input {
-            width: 75px;
-        }
-
-        #crop-btn {
-            padding: 7px;
-            min-width: 75px;
-            background-color: snow;
-            border-radius: 5px;
-        }
-
-        #loader {
-            display: none;
-            border: 5px solid #f3f3f3;
-            animation: spin 1s linear infinite;
-            border-top: 5px solid #555;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            vertical-align: middle;
-            margin-left: 15px;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        #progress {
-            margin-left: 7px;
-        }
-
-        #result-line * {
-            vertical-align: middle;
-        }
-
-        #result-title {
-            margin: 7px;
-            display: inline-block;
-        }
-
-        #result-btn-group {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-
-            visibility: hidden;
-        }
-
-        #result-btn-group .btn {
-            color: black;
-            fill: black;
-            background-color: rgb(235, 235, 235);
-            font-family: "Trebuchet MS";
-            padding: 7px;
-            border-radius: 5px;
-            border: 1px solid black;
-            font-size: large;
-            cursor: pointer;
-            text-decoration: none;
-            appearance: button;
-        }
-
-        #result-btn-group .btn:hover {
-            fill: rgb(0, 123, 255);
-            filter: brightness(0.9);
-        }
-
-        #result-btn-group .btn:active {
-            filter: brightness(0.75);
-        }
-
-        #share-btn {
-            display: none;
-        }
-
-        #video-output {
-            display: none;
-        }
-
-        kbd {
-            background-color: #eee;
-            border-radius: 3px;
-            border: 1px solid #b4b4b4;
-            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2), 0 2px 0 0 rgba(255, 255, 255, 0.7) inset;
-            color: #333;
-            display: inline-block;
-            font-size: 0.95em;
-            font-weight: 700;
-            line-height: 1;
-            padding: 2px 4px;
-            white-space: nowrap;
-            margin: 1.5px;
-        }
-    </style>
 </head>
 
 <body>
@@ -260,11 +54,11 @@
 
     <div style="max-width: 1000px; margin: 0 auto;">
         <p id="description">
-            <span style="font-weight: bold">VideoCrop</span> is an offline, browser-based video
+            <span style="font-weight: bold">VideoCrop</span> is an offline-compatible, browser-based video
             cropping tool built on top of
             <span style="font-family: 'Courier New'; font-weight: bold">ffmpeg.wasm</span>.
             In fact,
-            VideoCrop will never upload or send anything to a server, and works even if you disable
+            VideoCrop will <span style="text-decoration: underline;">never upload or send anything to a server</span>, and works even if you disable
             your Wi-Fi.
             Start by clicking on the file input button or by dragging and dropping a
             video file onto the page.
@@ -290,10 +84,10 @@
     <div>
         <div>
             <div id="bounds">
-                <div id="area" tabindex="0">
+                <area-selector id="area" tabindex="0">
                     <div id="area-txt"></div>
-                </div>
-                <video id="video-input" controls></video>
+                </area-selector>
+                <video id="video-input" controls preload="auto"></video>
             </div>
         </div>
         <div id="params">
@@ -338,7 +132,7 @@
             </a>
         </div>
     </div>
-    <video id="video-output" controls></video>
+    <video id="video-output" controls preload="auto"></video>
 </body>
 
 </html>

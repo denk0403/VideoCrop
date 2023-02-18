@@ -1,4 +1,6 @@
-function init() {
+"use strict";
+
+{
     /** @type {HTMLInputElement} */
     const inputHtml = document.getElementById("input");
     /** @type {HTMLVideoElement} */
@@ -7,8 +9,8 @@ function init() {
     const videoOut = document.getElementById("video-output");
     /** @type {HTMLButtonElement} */
     const cropBtn = document.getElementById("crop-btn");
-    /** @type {HTMLDivElement} */
-    const areaElt = document.getElementById("area");
+    /** @type {import("./area-selector.mjs").AreaSelector} */
+    const areaSelector = document.getElementById("area");
     /** @type {HTMLDivElement} */
     const loader = document.getElementById("loader");
     /** @type {HTMLSpanElement} */
@@ -56,14 +58,18 @@ function init() {
     new ResizeObserver(() => {
         if (!scaleInput.valueAsNumber) return;
 
-        const width = areaElt.offsetWidth;
-        const height = areaElt.offsetHeight;
+        const width = areaSelector.offsetWidth;
+        const height = areaSelector.offsetHeight;
         areaTxt.textContent = `${width} x ${height}`;
         const [outWidth, outHeight] = calcDimensions(width, height, scaleInput.valueAsNumber);
         outDim.textContent = `Output Dimensions: ${outWidth} x ${outHeight}`;
-    }).observe(areaElt);
+    }).observe(areaSelector);
 
-    videoOut.onloadeddata = () => {
+    /**
+     * Must use onresize because the "resize" event will always fire when a video src has successfully changed.
+     * onloadeddata will not fire in mobile/tablet devices if data-saver is on in browser settings.
+     */
+    videoOut.onresize = () => {
         resultBtnGroup.style.visibility = "visible";
         videoOut.style.display = "inline-block";
         videoOut.scrollIntoView({ behavior: "smooth" });
@@ -162,20 +168,25 @@ function init() {
     inputHtml.addEventListener("input", async () => {
         const file = inputHtml.files[0];
         if (!file || !file.type.startsWith("video")) {
-            videoIn.src = null;
+            videoIn.src = "";
             cropBtn.disabled = true;
-            areaElt.style.display = "none";
+            areaSelector.style.display = "none";
             return;
         }
 
         const fr = new FileReader();
         fr.onload = () => {
+            if (videoIn.src) URL.revokeObjectURL(videoIn.src);
+
             videoIn.textContent = "";
             videoIn.src = URL.createObjectURL(new Blob([fr.result], { type: "video/mp4" }));
 
             videoIn.onresize = () => {
-                areaElt.style.display = "flex";
-                createDragElement(areaElt, videoIn.videoWidth, videoIn.videoHeight);
+                const videoInBox = videoIn.getBoundingClientRect();
+                areaSelector.style.display = "flex";
+                areaSelector.style.width = `${videoInBox.width / 3}px`;
+                areaSelector.style.height = `${videoInBox.height / 3}px`;
+
                 progress.textContent = "";
                 cropBtn.disabled = false;
                 cropBtn.textContent = "Crop";
@@ -234,8 +245,8 @@ function init() {
                     const newValue = scaleInput.valueAsNumber;
                     if (newValue > 0) prevScale = newValue;
 
-                    const width = areaElt.offsetWidth;
-                    const height = areaElt.offsetHeight;
+                    const width = areaSelector.offsetWidth;
+                    const height = areaSelector.offsetHeight;
                     const [outWidth, outHeight] = calcDimensions(width, height, newValue);
                     outDim.textContent = `Output Dimensions: ${outWidth} x ${outHeight}`;
                 };
@@ -243,8 +254,8 @@ function init() {
                     const newValue = scaleInput.valueAsNumber;
                     if (!newValue || newValue < 0) scaleInput.valueAsNumber = 0.1;
 
-                    const width = areaElt.offsetWidth;
-                    const height = areaElt.offsetHeight;
+                    const width = areaSelector.offsetWidth;
+                    const height = areaSelector.offsetHeight;
                     const [outWidth, outHeight] = calcDimensions(
                         width,
                         height,
@@ -275,10 +286,10 @@ function init() {
                     try {
                         await transcode(
                             file,
-                            areaElt.offsetLeft,
-                            areaElt.offsetTop,
-                            areaElt.offsetWidth,
-                            areaElt.offsetHeight,
+                            areaSelector.offsetLeft,
+                            areaSelector.offsetTop,
+                            areaSelector.offsetWidth,
+                            areaSelector.offsetHeight,
                             startTimeInput.valueAsNumber || 0,
                             endTimeInput.valueAsNumber || duration,
                             scaleInput.valueAsNumber || 1,
@@ -321,91 +332,6 @@ function init() {
         return val < min ? min : val > max ? max : val;
     }
 
-    /**
-     * Creates a draggable element.
-     * @param {HTMLDivElement} elmnt
-     * @param {number} cWidth the container's width
-     * @param {number} cHeight the container's height
-     */
-    function createDragElement(elmnt, cWidth, cHeight) {
-        var deltaX = 0,
-            deltaY = 0,
-            lastX = 0,
-            lastY = 0;
-        elmnt.onmousedown = dragMouseDown;
-
-        elmnt.style.left = 0;
-        elmnt.style.top = 0;
-        elmnt.style.maxWidth = cWidth - elmnt.offsetLeft;
-        elmnt.style.maxHeight = cHeight - elmnt.offsetTop;
-
-        /**
-         *
-         * @param {MouseEvent} e
-         */
-        function dragMouseDown(e) {
-            e = e || window.event;
-
-            // checks that mousedown is inside the
-            // resize corner padding for the element
-            const padding = 20; // pixels
-            if (
-                e.offsetX > elmnt.offsetWidth - padding &&
-                e.offsetY > elmnt.offsetHeight - padding
-            ) {
-                // allow resizing
-                return;
-            }
-
-            e.preventDefault();
-            // get the mouse cursor position at startup
-            lastX = e.clientX;
-            lastY = e.clientY;
-            elmnt.focus();
-
-            // call a function whenever the cursor moves
-            document.onmousemove = dragElement;
-            document.onmouseup = closeDragElement;
-        }
-
-        moveArea = (elmnt, dx, dy) => {
-            // set the element's new position:
-            elmnt.offsetWidth = clamp(0, elmnt.style.width, cWidth - elmnt.offsetLeft);
-            elmnt.offsetHeight = clamp(0, elmnt.style.height, cHeight - elmnt.offsetTop);
-            elmnt.style.width = elmnt.offsetWidth;
-            elmnt.style.height = elmnt.offsetHeight;
-
-            elmnt.style.top = clamp(0, elmnt.offsetTop + dy, cHeight - elmnt.offsetHeight) + "px";
-            elmnt.style.left = clamp(0, elmnt.offsetLeft + dx, cWidth - elmnt.offsetWidth) + "px";
-            elmnt.style.maxWidth = cWidth - elmnt.offsetLeft;
-            elmnt.style.maxHeight = cHeight - elmnt.offsetTop;
-        };
-
-        /**
-         *
-         * @param {MouseEvent} e
-         */
-        function dragElement(e) {
-            e = e || window.event;
-            e.preventDefault();
-
-            // calculate the new cursor position
-            deltaX = e.clientX - lastX;
-            deltaY = e.clientY - lastY;
-            lastX = e.clientX;
-            lastY = e.clientY;
-
-            // set the element's new position
-            moveArea(elmnt, deltaX, deltaY);
-        }
-
-        function closeDragElement() {
-            // stop moving when mouse button is released
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
-    }
-
     window.addEventListener("dragover", (event) => {
         event.preventDefault();
     });
@@ -423,53 +349,6 @@ function init() {
         inputHtml.files = files;
         inputHtml.dispatchEvent(new InputEvent("input"));
     });
-
-    /**
-     *
-     * @param {KeyboardEvent} event
-     */
-    function handleAreaKeyBindings(event) {
-        let shift = 1;
-        if (event.metaKey) shift = 10;
-        if (event.shiftKey && event.metaKey) shift = 25;
-
-        if (event.ctrlKey && event.ctrlKey) {
-            if (event.key === "ArrowUp") {
-                event.preventDefault();
-                areaElt.style.height = areaElt.offsetHeight - shift;
-            } else if (event.key === "ArrowRight") {
-                event.preventDefault();
-                areaElt.style.width = areaElt.offsetWidth + shift;
-            } else if (event.key === "ArrowDown") {
-                event.preventDefault();
-                areaElt.style.height = areaElt.offsetHeight + shift;
-            } else if (event.key === "ArrowLeft") {
-                event.preventDefault();
-                areaElt.style.width = areaElt.offsetWidth - shift;
-            }
-        } else {
-            if (event.key === "ArrowUp") {
-                event.preventDefault();
-                moveArea(areaElt, 0, -shift);
-            } else if (event.key === "ArrowRight") {
-                event.preventDefault();
-                moveArea(areaElt, shift, 0);
-            } else if (event.key === "ArrowDown") {
-                event.preventDefault();
-                moveArea(areaElt, 0, shift);
-            } else if (event.key === "ArrowLeft") {
-                event.preventDefault();
-                moveArea(areaElt, -shift, 0);
-            }
-        }
-    }
-
-    areaElt.onfocus = () => {
-        areaElt.onkeydown = handleAreaKeyBindings;
-    };
-    areaElt.onblur = () => {
-        areaElt.onkeydown = undefined;
-    };
 }
 
 /**
@@ -507,4 +386,14 @@ function toRange(num) {
     return num.toFixed(2);
 }
 
-document.addEventListener("DOMContentLoaded", init, { once: true });
+function unregisterServiceWorker() {
+    navigator.serviceWorker
+        ?.getRegistrations()
+        .then((registrations) => {
+            console.log(registrations);
+            registrations.map((reg) => reg.unregister());
+        })
+        .catch((err) => {
+            console.error(err);
+        });
+}
