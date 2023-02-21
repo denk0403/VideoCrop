@@ -58,7 +58,8 @@
             cropping tool built on top of
             <span style="font-family: 'Courier New'; font-weight: bold">ffmpeg.wasm</span>.
             In fact,
-            VideoCrop will <span style="text-decoration: underline;">never upload or send anything to a server</span>, and works even if you disable
+            VideoCrop will <span style="text-decoration: underline;">never upload or send anything to a server</span>,
+            and works even if you disable
             your Wi-Fi.
             Start by clicking on the file input button or by dragging and dropping a
             video file onto the page.
@@ -93,13 +94,16 @@
         <div id="params">
             <div class="param">
                 Trim:
-                <input id="start-time" type="number" min="0" step="0.01" disabled />
+                <input id="start-time" type="number" min="0" step="0.01" pattern="^\d*(\.\d{0,2})?$" inputmode="numeric"
+                    disabled />
                 —
-                <input id="end-time" type="number" min="1" step="0.01" disabled />
+                <input id="end-time" type="number" min="1" step="0.01" pattern="^\d*(\.\d{0,2})?$" inputmode="numeric"
+                    disabled />
             </div>
             <label class="param scale">
                 Scale:
-                <input id="scale" type="number" min="0.1" step="0.1" disabled />
+                <input id="scale" type="number" min="0.1" step="0.01" pattern="^\d*(\.\d{0,2})?$" inputmode="numeric"
+                    disabled />
             </label>
         </div>
         <div id="out-dim"></div>

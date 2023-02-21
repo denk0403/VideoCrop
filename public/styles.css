@@ -110,7 +110,9 @@ area-selector:focus-within {
 }
 
 .param input {
-    width: 75px;
+    width: 100px;
+    padding: 5px;
+    border-radius: 5px;
 }
 
 #crop-btn {
