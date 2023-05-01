@@ -367,7 +367,7 @@ export class AreaSelector extends HTMLElement {
             }
         };
 
-        this.addEventListener("focus", (e) => {
+        this.addEventListener("focus", () => {
             window.addEventListener("keydown", handleKeyPress);
             window.addEventListener(
                 "blur",

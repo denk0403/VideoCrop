@@ -33,6 +33,8 @@
     const scaleInput = document.getElementById("scale");
     /** @type {HTMLDivElement} */
     const outDim = document.getElementById("out-dim");
+    /** @type {HTMLDivElement} */
+    const resultBox = document.getElementById("result");
 
     let errorTimer;
     /**
@@ -70,9 +72,8 @@
      * onloadeddata will not fire in mobile/tablet devices if data-saver is on in browser settings.
      */
     videoOut.onresize = () => {
-        resultBtnGroup.style.visibility = "visible";
-        videoOut.style.display = "inline-block";
-        videoOut.scrollIntoView({ behavior: "smooth" });
+        resultBox.style.display = "block";
+        resultBox.scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
     const { createFFmpeg, fetchFile } = FFmpeg;
@@ -121,19 +122,43 @@
         // Scaling code
         const [outWidth, outHeight] = calcDimensions(w, h, scaleFactor);
 
-        ffmpeg.FS("writeFile", file.name, await fetchFile(file));
-        await ffmpeg.run(
-            "-i",
-            file.name,
-            "-ss",
-            `${start}`,
-            "-to",
-            `${end}`,
-            "-vf",
-            `crop=${w}:${h}:${x}:${y}, scale=${outWidth}:${outHeight}`, // for scaling
-            "output.mp4",
-        );
-        const data = ffmpeg.FS("readFile", "output.mp4");
+        let ffmpegFile;
+        try {
+            ffmpegFile = await fetchFile(file);
+        } catch (err) {
+            throw new Error("Error fetching input file", { cause: err });
+        }
+
+        try {
+            ffmpeg.FS("writeFile", file.name, ffmpegFile);
+        } catch (err) {
+            throw new Error("Error writing input file", { cause: err });
+        }
+
+        try {
+            await ffmpeg.run(
+                "-i",
+                file.name,
+                "-ss",
+                `${start}`,
+                "-to",
+                `${end}`,
+                "-vf",
+                `crop=${w}:${h}:${x}:${y}, scale=${outWidth}:${outHeight}`, // for scaling
+                // "-q:v",
+                // "1",
+                "output.mp4",
+            );
+        } catch (err) {
+            throw new Error("Error running crop command", { cause: err });
+        }
+
+        let data;
+        try {
+            data = ffmpeg.FS("readFile", "output.mp4");
+        } catch (err) {
+            throw new Error("Error reading output file", { cause: err });
+        }
 
         if (videoOut.src) URL.revokeObjectURL(videoOut.src);
 
@@ -144,28 +169,32 @@
 
         if (!navigator.canShare) return;
 
-        fetch(objURL)
-            .then((res) => res.blob())
-            .then((blob) => {
-                const shareData = {
-                    files: [new File([blob], file.name, { type: "video/mp4" })],
-                    text: `Cropped using ${location.href}`,
-                };
+        const blob = await fetch(objURL).then((res) => res.blob());
+        try {
+            const shareData = {
+                files: [new File([blob], file.name, { type: "video/mp4" })],
+                text: `Cropped using ${location.href}`,
+            };
 
-                if (navigator.canShare(shareData)) {
-                    shareBtn.style.display = "inline";
-                    shareBtn.onclick = () => {
-                        navigator.share(shareData);
-                    };
-                } else {
-                    shareBtn.style.display = "none";
-                    shareBtn.onclick = undefined;
-                }
-            })
-            .catch((err) => console.error("Something went fetching the video at", objURL, err));
+            if (navigator.canShare(shareData)) {
+                shareBtn.style.display = "inline";
+                shareBtn.onclick = () => {
+                    navigator.share(shareData);
+                };
+            } else {
+                shareBtn.style.display = "none";
+                shareBtn.onclick = undefined;
+            }
+        } catch (err) {
+            console.dir(
+                new Error(`Something went fetching the video at ${objURL}`, { cause: err }),
+            );
+        }
     };
 
     inputHtml.addEventListener("input", async () => {
+        resultBox.style.display = "none";
+
         const file = inputHtml.files[0];
         if (!file || !file.type.startsWith("video")) {
             videoIn.src = "";
@@ -243,7 +272,7 @@
 
                 scaleInput.oninput = () => {
                     const newValue = scaleInput.valueAsNumber;
-                    if (newValue > 0) prevScale = newValue;
+                    if (!newValue || newValue < 0) newValue = 0.1;
 
                     const width = areaSelector.offsetWidth;
                     const height = areaSelector.offsetHeight;
@@ -296,7 +325,7 @@
                         );
                     } catch (err) {
                         progress.textContent = "Errored";
-                        console.error(err);
+                        console.dir(err);
                     } finally {
                         loader.style.display = "none";
                         cropBtn.textContent = "Crop";
