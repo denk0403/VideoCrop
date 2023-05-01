@@ -1,4 +1,4 @@
-const CACHE_NAME = "videocrop-v1.2.3";
+const CACHE_NAME = "videocrop-v1.2.4";
 const FFMPEG_URLS = [
     "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm",
     "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
@@ -16,14 +16,17 @@ const PRECACHE_URLS = [
 
 // Install a service worker
 self.addEventListener("install", (event) => {
-    self.skipWaiting();
+    self.skipWaiting(); // forces this service worker to become the active service worker.
 
-    // Precache assets on install
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(PRECACHE_URLS);
-        }),
-    );
+    // delete old cache, then
+    // precache updated assets
+    const refreshCacheTask = caches
+        .keys()
+        .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+        .then(() => caches.open(CACHE_NAME))
+        .then((cache) => cache.addAll(PRECACHE_URLS));
+
+    event.waitUntil(refreshCacheTask);
 });
 
 // Allow service worker to control current page on next load
