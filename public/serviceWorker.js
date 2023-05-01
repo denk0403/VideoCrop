@@ -1,4 +1,4 @@
-const CACHE_NAME = "videocrop-v1.2.5";
+const CACHE_NAME = "videocrop-v1.2.6";
 const FFMPEG_URLS = [
     "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm",
     "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
@@ -45,37 +45,52 @@ function fetchWrapper(req) {
     return networkFirst(req);
 }
 
-// Returns a match from the cache first, only making a network request if necessary
+/** Returns a match from the cache first, only making a network request if necessary
+ * @param {Request} req */
 async function cacheFirst(req) {
-    console.log(req.url);
-    const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(req);
-    return cached ?? networkAndCache(cache, req);
+    try {
+        const cache = await caches.open(CACHE_NAME);
+        try {
+            const cached = await cache.match(req);
+            return cached ?? networkAndCache(cache, req);
+        } catch (reason) {
+            console.error("Errored while reading from cache", req.url, reason, "Trying network...");
+            return networkAndCache(cache, req);
+        }
+    } catch (reason) {
+        console.error("Error opening cache:", CACHE_NAME, reason, "Trying network...");
+        return fetch(req);
+    }
 }
 
-// Returns a match from the network first, only opening cache if necessary
+/** Returns a match from the network first, only opening cache if necessary
+ * @param {Request} req */
 async function networkFirst(req) {
     try {
         const fresh = await fetch(req);
         const freshCopy = fresh.clone(); // must clone before use
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, freshCopy));
+        caches
+            .open(CACHE_NAME)
+            .then((cache) => cache.put(req, freshCopy))
+            .catch((reason) => console.error("Failed to update cache", reason));
         return fresh;
     } catch (e) {
-        console.error(e, "Trying to retrieve from cache...");
+        console.error(e, req.url, "Trying to retrieve from cache...");
         const cache = await caches.open(CACHE_NAME);
         return cache.match(req);
     }
 }
 
-// Makes the network request immediately if possible,
-// and saves the result in cache for future offline use
+/**
+ * Makes the network request immediately if possible,
+ * and saves the result in cache for future offline use
+ * @param {Cache} cache
+ * @param {Request} req
+ */
 async function networkAndCache(cache, req) {
-    try {
-        const fresh = await fetch(req);
-        cache.put(req, fresh.clone()); // must clone before use
-        return fresh;
-    } catch (e) {
-        console.error(e);
-        return;
-    }
+    const fresh = await fetch(req);
+    cache
+        .put(req, fresh.clone()) // must clone before use
+        .catch((reason) => console.error("Failed to update cache", reason));
+    return fresh;
 }
