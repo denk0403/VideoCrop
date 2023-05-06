@@ -217,12 +217,12 @@ export class AreaSelector extends HTMLElement {
                     e.stopPropagation();
 
                     this.focus();
-                    const touch = e.targetTouches[0];
+                    const touch = e.changedTouches[0];
                     const identifier = touch.identifier;
 
                     /** @param {TouchEvent} e */
                     const touchResize = (e) => {
-                        const touch = this.#getTouch(e.targetTouches, identifier);
+                        const touch = this.#getTouch(e.changedTouches, identifier);
                         resize(touch);
                     };
 
@@ -231,8 +231,8 @@ export class AreaSelector extends HTMLElement {
                     window.addEventListener("touchmove", touchResize, { passive: true });
                     window.addEventListener(
                         "touchend",
-                        () => {
-                            if (this.#getTouch(e.targetTouches, identifier))
+                        (e) => {
+                            if (this.#getTouch(e.changedTouches, identifier))
                                 window.removeEventListener("touchmove", touchResize);
                         },
                         { once: true, passive: true },
@@ -291,12 +291,12 @@ export class AreaSelector extends HTMLElement {
             "touchstart",
             (e) => {
                 this.focus();
-                const touch = e.targetTouches[0];
+                const touch = e.changedTouches[0];
                 const identifier = touch.identifier;
 
                 /** @param {TouchEvent} e */
                 const touchTranslate = (e) => {
-                    const touch = this.#getTouch(e.targetTouches, identifier);
+                    const touch = this.#getTouch(e.changedTouches, identifier);
                     if (touch) translate(touch);
                 };
 
@@ -306,7 +306,7 @@ export class AreaSelector extends HTMLElement {
                 window.addEventListener(
                     "touchend",
                     (e) => {
-                        if (this.#getTouch(e.targetTouches, identifier))
+                        if (this.#getTouch(e.changedTouches, identifier))
                             window.removeEventListener("touchmove", touchTranslate);
                     },
                     { once: true, passive: true },

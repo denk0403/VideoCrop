@@ -18,8 +18,6 @@
     /** @type {HTMLDivElement} */
     const errorMsg = document.getElementById("error-msg");
     /** @type {HTMLDivElement} */
-    const resultBtnGroup = document.getElementById("result-btn-group");
-    /** @type {HTMLDivElement} */
     const shareBtn = document.getElementById("share-btn");
     /** @type {HTMLAnchorElement} */
     const downloadBtn = document.getElementById("download-btn");
@@ -213,6 +211,8 @@
             videoIn.onresize = () => {
                 const videoInBox = videoIn.getBoundingClientRect();
                 areaSelector.style.display = "flex";
+                areaSelector.style.left = `0`;
+                areaSelector.style.top = `0`;
                 areaSelector.style.width = `${videoInBox.width / 3}px`;
                 areaSelector.style.height = `${videoInBox.height / 3}px`;
 
