@@ -196,12 +196,6 @@ export class AreaSelector extends HTMLElement {
                 this.dispatchEvent(new UIEvent("resize"));
             };
 
-            /** @param {TouchEvent} e */
-            const touchResize = (e) => {
-                const touch = e.targetTouches[0];
-                resize(touch);
-            };
-
             resizer.addEventListener("mousedown", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -223,14 +217,25 @@ export class AreaSelector extends HTMLElement {
                     e.stopPropagation();
 
                     this.focus();
-                    const touch = e.targetTouches[0];
+                    const touch = e.changedTouches[0];
+                    const identifier = touch.identifier;
+
+                    /** @param {TouchEvent} e */
+                    const touchResize = (e) => {
+                        const touch = this.#getTouch(e.changedTouches, identifier);
+                        resize(touch);
+                    };
+
                     assignStartingValues(touch);
 
                     window.addEventListener("touchmove", touchResize, { passive: true });
                     window.addEventListener(
                         "touchend",
-                        () => window.removeEventListener("touchmove", touchResize),
-                        { once: true },
+                        (e) => {
+                            if (this.#getTouch(e.changedTouches, identifier))
+                                window.removeEventListener("touchmove", touchResize);
+                        },
+                        { once: true, passive: true },
                     );
                 },
                 { passive: true },
@@ -268,12 +273,6 @@ export class AreaSelector extends HTMLElement {
             this.dispatchEvent(new UIEvent("translate"));
         };
 
-        /** @param {TouchEvent} e */
-        const touchTranslate = (e) => {
-            const touch = e.targetTouches[0];
-            translate(touch);
-        };
-
         this.addEventListener("mousedown", (e) => {
             e.preventDefault();
 
@@ -287,18 +286,30 @@ export class AreaSelector extends HTMLElement {
                 { once: true },
             );
         });
+
         this.addEventListener(
             "touchstart",
             (e) => {
                 this.focus();
-                const touch = e.targetTouches[0];
+                const touch = e.changedTouches[0];
+                const identifier = touch.identifier;
+
+                /** @param {TouchEvent} e */
+                const touchTranslate = (e) => {
+                    const touch = this.#getTouch(e.changedTouches, identifier);
+                    if (touch) translate(touch);
+                };
+
                 assignStartingValues(touch);
 
                 window.addEventListener("touchmove", touchTranslate, { passive: true });
                 window.addEventListener(
                     "touchend",
-                    () => window.removeEventListener("touchmove", touchTranslate),
-                    { once: true },
+                    (e) => {
+                        if (this.#getTouch(e.changedTouches, identifier))
+                            window.removeEventListener("touchmove", touchTranslate);
+                    },
+                    { once: true, passive: true },
                 );
             },
             { passive: true },
@@ -375,6 +386,14 @@ export class AreaSelector extends HTMLElement {
                 { once: true },
             );
         });
+    }
+
+    /**
+     * @param {TouchList} touchList
+     * @param {number} identifier
+     */
+    #getTouch(touchList, identifier) {
+        return [...touchList].find((t) => t.identifier === identifier);
     }
 }
 
