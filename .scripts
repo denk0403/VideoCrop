@@ -5,4 +5,4 @@ start() {
     vercel dev
 }
 
-if [ -z $@ ]; then start; else "$@"; fi
+if [ "$#" -eq 0 ]; then start; else "$@"; fi
