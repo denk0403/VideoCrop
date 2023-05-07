@@ -112,103 +112,104 @@ export class AreaSelector extends HTMLElement {
     }
 
     #makeResizable() {
-        let startLeft, // distance to parent's left edge (relative x-offset)
-            startTop, // distance to parent's top edge (relative y-offset)
-            startRight, // distance to parent's right edge
-            startBottom, // distance to parent's bottom edge
-            startWidth,
-            startHeight,
-            startMouseX,
-            startMouseY;
+        /** @typedef {{prevMouseX: number; prevMouseY: number}} PointerContext */
+        /** @typedef {(pc: PointerContext) => (e: MouseEvent | Touch) => any} ResizeHandlerGenerator */
 
-        /** @param {MouseEvent | Touch} e */
-        const assignStartingValues = (e) => {
-            const parentBox = this.#parentBox;
-            startWidth = this.offsetWidth;
-            startHeight = this.offsetHeight;
-            startLeft = this.offsetLeft;
-            startTop = this.offsetTop;
-            startRight = parentBox.width - (startLeft + startWidth);
-            startBottom = parentBox.height - (startTop + startHeight);
-            startMouseX = e.pageX;
-            startMouseY = e.pageY;
-        };
+        /**
+         * @template E
+         * @param {((e: E) => any)[]} fns
+         * @returns {(e: E) => void}
+         */
+        const chain =
+            (...fns) =>
+            (e) =>
+                fns.forEach((fn) => fn(e));
 
-        /** @param {MouseEvent | Touch} e */
-        const handleRight = (e) => {
-            const movementX = e.pageX - startMouseX;
-            const newWidth = clamp(MIN_SIZE, startWidth + movementX, startWidth + startRight);
+        /** @type {ResizeHandlerGenerator} */
+        const createHandleRight = (pc) => (e) => {
+            const left = this.offsetLeft;
+            const width = this.offsetWidth;
+
+            const movementX = e.pageX - pc.prevMouseX;
+            const right = this.#parentBox.width - (left + width);
+            const newWidth = clamp(MIN_SIZE, width + movementX, width + right);
+
             this.style.width = newWidth + "px";
+            pc.prevMouseX = e.pageX;
         };
-        /** @param {MouseEvent | Touch} e */
-        const handleLeft = (e) => {
-            const movementX = e.pageX - startMouseX;
-            const xShift = clamp(-startLeft, movementX, startWidth - MIN_SIZE);
-            const newWidth = startWidth - xShift;
-            const newLeft = startLeft + xShift;
+        /** @type {ResizeHandlerGenerator} */
+        const createHandleLeft = (pc) => (e) => {
+            const left = this.offsetLeft;
+            const width = this.offsetWidth;
+
+            const movementX = e.pageX - pc.prevMouseX;
+            const xShift = clamp(-left, movementX, width - MIN_SIZE);
+            const newWidth = width - xShift;
+            const newLeft = left + xShift;
+
             this.style.width = newWidth + "px";
             this.style.left = newLeft + "px";
+            pc.prevMouseX = e.pageX;
         };
-        /** @param {MouseEvent | Touch} e */
-        const handleBottom = (e) => {
-            const movementY = e.pageY - startMouseY;
-            const newHeight = clamp(MIN_SIZE, startHeight + movementY, startHeight + startBottom);
+        /** @type {ResizeHandlerGenerator} */
+        const createHandleBottom = (pc) => (e) => {
+            const height = this.offsetHeight;
+            const top = this.offsetTop;
+
+            const movementY = e.pageY - pc.prevMouseY;
+            const bottom = this.#parentBox.height - (top + height);
+            const newHeight = clamp(MIN_SIZE, height + movementY, height + bottom);
+
             this.style.height = newHeight + "px";
+            pc.prevMouseY = e.pageY;
         };
-        /** @param {MouseEvent | Touch} e */
-        const handleTop = (e) => {
-            const movementY = e.pageY - startMouseY;
-            const yShift = clamp(-startTop, movementY, startHeight - MIN_SIZE);
-            const newHeight = startHeight - yShift;
-            const newTop = startTop + yShift;
+        /** @type {ResizeHandlerGenerator} */
+        const createHandleTop = (pc) => (e) => {
+            const height = this.offsetHeight;
+            const top = this.offsetTop;
+
+            const movementY = e.pageY - pc.prevMouseY;
+            const yShift = clamp(-top, movementY, height - MIN_SIZE);
+            const newHeight = height - yShift;
+            const newTop = top + yShift;
 
             this.style.height = newHeight + "px";
             this.style.top = newTop + "px";
+            pc.prevMouseY = e.pageY;
         };
 
-        const resizeHandlers = {
-            right: handleRight,
-            bottom: handleBottom,
-            left: handleLeft,
-            top: handleTop,
-            "bottom-right": (e) => {
-                handleBottom(e);
-                handleRight(e);
-            },
-            "bottom-left": (e) => {
-                handleBottom(e);
-                handleLeft(e);
-            },
-            "top-right": (e) => {
-                handleTop(e);
-                handleRight(e);
-            },
-            "top-left": (e) => {
-                handleTop(e);
-                handleLeft(e);
-            },
+        /** @type {Record<string, ResizeHandlerGenerator>} */
+        const resizeHandlerGeneratorMap = {
+            right: createHandleRight,
+            bottom: createHandleBottom,
+            left: createHandleLeft,
+            top: createHandleTop,
+            "bottom-right": (pc) => chain(createHandleBottom(pc), createHandleRight(pc)),
+            "bottom-left": (pc) => chain(createHandleBottom(pc), createHandleLeft(pc)),
+            "top-right": (pc) => chain(createHandleTop(pc), createHandleRight(pc)),
+            "top-left": (pc) => chain(createHandleTop(pc), createHandleLeft(pc)),
         };
 
         /** @type {NodeListOf<HTMLElement>} */
         const resizers = this.#r.querySelectorAll(".resizer");
         for (const resizer of resizers) {
-            /** @param {MouseEvent | Touch} e */
-            const resize = (e) => {
-                resizeHandlers[resizer.id](e);
-                this.dispatchEvent(new UIEvent("resize"));
-            };
+            /** @type {PointerContext} */
+            let pc = { prevMouseX: 0, prevMouseY: 0 };
+            const handleResize = resizeHandlerGeneratorMap[resizer.id](pc);
 
             resizer.addEventListener("mousedown", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
 
                 this.focus();
-                assignStartingValues(e);
 
-                window.addEventListener("mousemove", resize);
+                pc.prevMouseX = e.pageX;
+                pc.prevMouseY = e.pageY;
+
+                window.addEventListener("mousemove", handleResize);
                 window.addEventListener(
                     "mouseup",
-                    () => window.removeEventListener("mousemove", resize),
+                    () => window.removeEventListener("mousemove", handleResize),
                     { once: true },
                 );
             });
@@ -219,25 +220,31 @@ export class AreaSelector extends HTMLElement {
                     e.stopPropagation();
 
                     this.focus();
+
                     const touch = e.changedTouches[0];
                     const identifier = touch.identifier;
+                    pc.prevMouseX = touch.pageX;
+                    pc.prevMouseY = touch.pageY;
 
                     /** @param {TouchEvent} e */
                     const touchResize = (e) => {
                         const touch = this.#getTouch(e.changedTouches, identifier);
-                        if (touch) resize(touch);
+                        if (touch) handleResize(touch);
                     };
 
-                    assignStartingValues(touch);
+                    const abortCtrl = new AbortController();
 
-                    window.addEventListener("touchmove", touchResize, { passive: true });
+                    window.addEventListener("touchmove", touchResize, {
+                        passive: true,
+                        signal: abortCtrl.signal,
+                    });
+
                     window.addEventListener(
                         "touchend",
                         (e) => {
-                            if (this.#getTouch(e.changedTouches, identifier))
-                                window.removeEventListener("touchmove", touchResize);
+                            if (this.#getTouch(e.changedTouches, identifier)) abortCtrl.abort();
                         },
-                        { once: true, passive: true },
+                        { passive: true, signal: abortCtrl.signal },
                     );
                 },
                 { passive: true },
@@ -271,8 +278,6 @@ export class AreaSelector extends HTMLElement {
 
             this.style.left = clamp(0, startLeft + movementX, startLeft + startRight) + "px";
             this.style.top = clamp(0, startTop + movementY, startTop + startBottom) + "px";
-
-            this.dispatchEvent(new UIEvent("translate"));
         };
 
         this.addEventListener("mousedown", (e) => {
@@ -319,10 +324,11 @@ export class AreaSelector extends HTMLElement {
         window.addEventListener(
             "touchend",
             (e) => {
-                if (currentTouchId && this.#getTouch(e.changedTouches, currentTouchId)) {
-                    window.removeEventListener("touchmove", touchTranslate);
-                    currentTouchId = null;
-                }
+                if (currentTouchId === null || !this.#getTouch(e.changedTouches, currentTouchId))
+                    return;
+
+                window.removeEventListener("touchmove", touchTranslate);
+                currentTouchId = null;
             },
             { passive: true },
         );
@@ -332,58 +338,54 @@ export class AreaSelector extends HTMLElement {
         /** @param {KeyboardEvent} e */
         const handleKeyPress = (e) => {
             const parentBox = this.#parentBox;
+            const width = this.offsetWidth;
+            const height = this.offsetHeight;
             const availLeft = this.offsetLeft;
             const availTop = this.offsetTop;
-            const availRight = parentBox.width - (availLeft + this.offsetWidth);
-            const availBottom = parentBox.height - (availTop + this.offsetHeight);
+            const availRight = parentBox.width - (availLeft + width);
+            const availBottom = parentBox.height - (availTop + height);
 
             let shift = 1;
             if (e.metaKey) shift = 10;
             if (e.shiftKey && e.metaKey) shift = 25;
 
             if (e.ctrlKey && e.altKey) {
+                // resize
                 switch (e.key) {
                     case "ArrowUp":
                         shift *= -1;
                     case "ArrowDown": {
                         e.preventDefault();
-                        this.style.height =
-                            clamp(
-                                MIN_SIZE,
-                                this.offsetHeight + shift,
-                                this.offsetHeight + availBottom,
-                            ) + "px";
+                        const newHeight = clamp(MIN_SIZE, height + shift, height + availBottom);
+                        this.style.height = newHeight + "px";
                         break;
                     }
                     case "ArrowLeft":
                         shift *= -1;
                     case "ArrowRight": {
                         e.preventDefault();
-                        this.style.width =
-                            clamp(
-                                MIN_SIZE,
-                                this.offsetWidth + shift,
-                                this.offsetWidth + availRight,
-                            ) + "px";
+                        const newWidth = clamp(MIN_SIZE, width + shift, width + availRight);
+                        this.style.width = newWidth + "px";
                         break;
                     }
                 }
             } else {
+                // translate
                 switch (e.key) {
                     case "ArrowUp":
                         shift *= -1;
                     case "ArrowDown": {
                         e.preventDefault();
-                        this.style.top =
-                            clamp(0, this.offsetTop + shift, this.offsetTop + availBottom) + "px";
+                        const newTop = clamp(0, availTop + shift, availTop + availBottom);
+                        this.style.top = newTop + "px";
                         break;
                     }
                     case "ArrowLeft":
                         shift *= -1;
                     case "ArrowRight": {
                         e.preventDefault();
-                        this.style.left =
-                            clamp(0, this.offsetLeft + shift, this.offsetLeft + availRight) + "px";
+                        const newLeft = clamp(0, availLeft + shift, availLeft + availRight);
+                        this.style.left = newLeft + "px";
                         break;
                     }
                 }
