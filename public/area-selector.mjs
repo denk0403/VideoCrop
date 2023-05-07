@@ -25,11 +25,10 @@ const styles = /* css */ `
     box-sizing: border-box;
     width: calc(var(--radius) * 2);
     height: calc(var(--radius) * 2);
-    border-radius: 50%; /*magic to turn square into circle*/
+    border-radius: 50%;
     background: white;
     border: 3px solid #4286f4;
     position: absolute;
-
 }
 
 .resizer#right {
@@ -75,6 +74,9 @@ const styles = /* css */ `
 `;
 
 export class AreaSelector extends HTMLElement {
+    /** @typedef {(touch: Touch) => any} TouchAction */
+    /** @typedef {(e: TouchEvent) => any} TouchEventHandler */
+
     /** @type {ShadowRoot} */
     #r;
 
@@ -223,7 +225,7 @@ export class AreaSelector extends HTMLElement {
                     /** @param {TouchEvent} e */
                     const touchResize = (e) => {
                         const touch = this.#getTouch(e.changedTouches, identifier);
-                        resize(touch);
+                        if (touch) resize(touch);
                     };
 
                     assignStartingValues(touch);
@@ -287,30 +289,40 @@ export class AreaSelector extends HTMLElement {
             );
         });
 
+        /** @type {number?} */
+        let currentTouchId = null;
+        /** @type {TouchEventHandler} */
+        const touchTranslate = (e) => {
+            if (currentTouchId === null) return;
+
+            const touch = this.#getTouch(e.changedTouches, currentTouchId);
+            if (touch) translate(touch);
+        };
+
         this.addEventListener(
             "touchstart",
             (e) => {
+                // abort if a touch is already active
+                if (currentTouchId !== null) return;
+
                 this.focus();
                 const touch = e.changedTouches[0];
-                const identifier = touch.identifier;
-
-                /** @param {TouchEvent} e */
-                const touchTranslate = (e) => {
-                    const touch = this.#getTouch(e.changedTouches, identifier);
-                    if (touch) translate(touch);
-                };
+                currentTouchId = touch.identifier;
 
                 assignStartingValues(touch);
 
                 window.addEventListener("touchmove", touchTranslate, { passive: true });
-                window.addEventListener(
-                    "touchend",
-                    (e) => {
-                        if (this.#getTouch(e.changedTouches, identifier))
-                            window.removeEventListener("touchmove", touchTranslate);
-                    },
-                    { once: true, passive: true },
-                );
+            },
+            { passive: true },
+        );
+
+        window.addEventListener(
+            "touchend",
+            (e) => {
+                if (currentTouchId && this.#getTouch(e.changedTouches, currentTouchId)) {
+                    window.removeEventListener("touchmove", touchTranslate);
+                    currentTouchId = null;
+                }
             },
             { passive: true },
         );
