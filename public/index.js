@@ -414,15 +414,3 @@ function formatNumber2Time(num) {
 function toRange(num) {
     return num.toFixed(2);
 }
-
-function unregisterServiceWorker() {
-    navigator.serviceWorker
-        ?.getRegistrations()
-        .then((registrations) => {
-            console.log(registrations);
-            registrations.map((reg) => reg.unregister());
-        })
-        .catch((err) => {
-            console.error(err);
-        });
-}

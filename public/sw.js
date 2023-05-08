@@ -1,4 +1,4 @@
-const CACHE_NAME = "videocrop-v1.2.6";
+const CACHE_NAME = "videocrop-v1.2.7";
 const FFMPEG_URLS = [
     "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm",
     "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
@@ -10,7 +10,7 @@ const PRECACHE_URLS = [
     "/index.js",
     "/area-selector.mjs",
     "/ffmpeg.min.js",
-    "/swWrapper.js",
+    "/sw-registrar.js",
     "/default-yellow.png",
     ...FFMPEG_URLS,
 ];
@@ -50,15 +50,14 @@ function fetchWrapper(req) {
 async function cacheFirst(req) {
     try {
         const cache = await caches.open(CACHE_NAME);
-        try {
-            const cached = await cache.match(req);
-            return cached ?? networkAndCache(cache, req);
-        } catch (reason) {
-            console.error("Errored while reading from cache", req.url, reason, "Trying network...");
-            return networkAndCache(cache, req);
-        }
+        const cached = await cache.match(req);
+        return cached ?? networkAndCache(cache, req);
     } catch (reason) {
-        console.error("Error opening cache:", CACHE_NAME, reason, "Trying network...");
+        console.error(
+            `Error accessing cache ${CACHE_NAME} for ${req.url}`,
+            reason,
+            "Trying network...",
+        );
         return fetch(req);
     }
 }
