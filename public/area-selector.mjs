@@ -74,16 +74,11 @@ const styles = /* css */ `
 `;
 
 export class AreaSelector extends HTMLElement {
-    /** @typedef {(touch: Touch) => any} TouchAction */
-    /** @typedef {(e: TouchEvent) => any} TouchEventHandler */
-
     /** @type {ShadowRoot} */
     #r;
 
     /** @type {DOMRect} */
-    get #parentBox() {
-        return this.offsetParent.getBoundingClientRect();
-    }
+    #parentBox;
 
     constructor() {
         super();
@@ -106,14 +101,15 @@ export class AreaSelector extends HTMLElement {
     }
 
     connectedCallback() {
+        this.#watchParentBox();
         this.#makeResizable();
         this.#makeDraggable();
         this.#attachKeyBindings();
     }
 
     #makeResizable() {
-        /** @typedef {{prevMouseX: number; prevMouseY: number}} PointerContext */
-        /** @typedef {(pc: PointerContext) => (e: MouseEvent | Touch) => any} ResizeHandlerGenerator */
+        /** @typedef {{prevPageX: number; prevPageY: number}} Scope */
+        /** @typedef {(scope: Scope) => (e: PointerEvent) => any} ResizeHandlerGenerator */
 
         /**
          * @template E
@@ -126,129 +122,105 @@ export class AreaSelector extends HTMLElement {
                 fns.forEach((fn) => fn(e));
 
         /** @type {ResizeHandlerGenerator} */
-        const createHandleRight = (pc) => (e) => {
+        const createHandleRight = (scope) => (e) => {
             const left = this.offsetLeft;
             const width = this.offsetWidth;
-
-            const movementX = e.pageX - pc.prevMouseX;
             const right = this.#parentBox.width - (left + width);
+
+            const movementX = e.pageX - scope.prevPageX;
             const newWidth = clamp(MIN_SIZE, width + movementX, width + right);
 
             this.style.width = newWidth + "px";
-            pc.prevMouseX = e.pageX;
+            scope.prevPageX = e.pageX;
         };
         /** @type {ResizeHandlerGenerator} */
-        const createHandleLeft = (pc) => (e) => {
+        const createHandleLeft = (scope) => (e) => {
             const left = this.offsetLeft;
             const width = this.offsetWidth;
 
-            const movementX = e.pageX - pc.prevMouseX;
+            const movementX = e.pageX - scope.prevPageX;
             const xShift = clamp(-left, movementX, width - MIN_SIZE);
             const newWidth = width - xShift;
             const newLeft = left + xShift;
 
             this.style.width = newWidth + "px";
             this.style.left = newLeft + "px";
-            pc.prevMouseX = e.pageX;
+            scope.prevPageX = e.pageX;
         };
         /** @type {ResizeHandlerGenerator} */
-        const createHandleBottom = (pc) => (e) => {
+        const createHandleBottom = (scope) => (e) => {
             const height = this.offsetHeight;
             const top = this.offsetTop;
-
-            const movementY = e.pageY - pc.prevMouseY;
             const bottom = this.#parentBox.height - (top + height);
+
+            const movementY = e.pageY - scope.prevPageY;
             const newHeight = clamp(MIN_SIZE, height + movementY, height + bottom);
 
             this.style.height = newHeight + "px";
-            pc.prevMouseY = e.pageY;
+            scope.prevPageY = e.pageY;
         };
         /** @type {ResizeHandlerGenerator} */
-        const createHandleTop = (pc) => (e) => {
+        const createHandleTop = (scope) => (e) => {
             const height = this.offsetHeight;
             const top = this.offsetTop;
 
-            const movementY = e.pageY - pc.prevMouseY;
+            const movementY = e.pageY - scope.prevPageY;
             const yShift = clamp(-top, movementY, height - MIN_SIZE);
             const newHeight = height - yShift;
             const newTop = top + yShift;
 
             this.style.height = newHeight + "px";
             this.style.top = newTop + "px";
-            pc.prevMouseY = e.pageY;
+            scope.prevPageY = e.pageY;
         };
 
         /** @type {Record<string, ResizeHandlerGenerator>} */
-        const resizeHandlerGeneratorMap = {
+        const handlerGeneratorMap = {
             right: createHandleRight,
             bottom: createHandleBottom,
             left: createHandleLeft,
             top: createHandleTop,
-            "bottom-right": (pc) => chain(createHandleBottom(pc), createHandleRight(pc)),
-            "bottom-left": (pc) => chain(createHandleBottom(pc), createHandleLeft(pc)),
-            "top-right": (pc) => chain(createHandleTop(pc), createHandleRight(pc)),
-            "top-left": (pc) => chain(createHandleTop(pc), createHandleLeft(pc)),
+            "bottom-right": (scope) => chain(createHandleBottom(scope), createHandleRight(scope)),
+            "bottom-left": (scope) => chain(createHandleBottom(scope), createHandleLeft(scope)),
+            "top-right": (scope) => chain(createHandleTop(scope), createHandleRight(scope)),
+            "top-left": (scope) => chain(createHandleTop(scope), createHandleLeft(scope)),
         };
 
         /** @type {NodeListOf<HTMLElement>} */
         const resizers = this.#r.querySelectorAll(".resizer");
         for (const resizer of resizers) {
-            /** @type {PointerContext} */
-            let pc = { prevMouseX: 0, prevMouseY: 0 };
-            const handleResize = resizeHandlerGeneratorMap[resizer.id](pc);
+            /** @type {Scope} */
+            const scope = { prevPageX: 0, prevPageY: 0 };
+            const handleResize = handlerGeneratorMap[resizer.id](scope);
 
-            resizer.addEventListener("mousedown", (e) => {
+            resizer.addEventListener("pointerdown", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
 
+                const pid = e.pointerId;
+                scope.prevPageX = e.pageX;
+                scope.prevPageY = e.pageY;
+
+                /** @param {PointerEvent} e */
+                const guardedResize = (e) => {
+                    if (e.pointerId === pid) handleResize(e);
+                };
+
                 this.focus();
+                const abortCtrl = new AbortController();
 
-                pc.prevMouseX = e.pageX;
-                pc.prevMouseY = e.pageY;
+                window.addEventListener("pointermove", guardedResize, {
+                    signal: abortCtrl.signal,
+                });
 
-                window.addEventListener("mousemove", handleResize);
                 window.addEventListener(
-                    "mouseup",
-                    () => window.removeEventListener("mousemove", handleResize),
-                    { once: true },
+                    "pointerup",
+                    (e) => {
+                        if (e.pointerId === pid) abortCtrl.abort();
+                    },
+                    { signal: abortCtrl.signal },
                 );
             });
-
-            resizer.addEventListener(
-                "touchstart",
-                (e) => {
-                    e.stopPropagation();
-
-                    this.focus();
-
-                    const touch = e.changedTouches[0];
-                    const identifier = touch.identifier;
-                    pc.prevMouseX = touch.pageX;
-                    pc.prevMouseY = touch.pageY;
-
-                    /** @param {TouchEvent} e */
-                    const touchResize = (e) => {
-                        const touch = this.#getTouch(e.changedTouches, identifier);
-                        if (touch) handleResize(touch);
-                    };
-
-                    const abortCtrl = new AbortController();
-
-                    window.addEventListener("touchmove", touchResize, {
-                        passive: true,
-                        signal: abortCtrl.signal,
-                    });
-
-                    window.addEventListener(
-                        "touchend",
-                        (e) => {
-                            if (this.#getTouch(e.changedTouches, identifier)) abortCtrl.abort();
-                        },
-                        { passive: true, signal: abortCtrl.signal },
-                    );
-                },
-                { passive: true },
-            );
         }
     }
 
@@ -257,93 +229,58 @@ export class AreaSelector extends HTMLElement {
             startTop, // distance to parent's top edge (relative y-offset)
             startRight, // distance to parent's right edge
             startBottom, // distance to parent's bottom edge
-            startMouseX,
-            startMouseY;
+            startPageX,
+            startPageY;
 
         /** @param {MouseEvent | Touch} e */
-        const assignStartingValues = (e) => {
-            const parentBox = this.#parentBox;
-            startLeft = this.offsetLeft;
-            startTop = this.offsetTop;
-            startRight = parentBox.width - (startLeft + this.offsetWidth);
-            startBottom = parentBox.height - (startTop + this.offsetHeight);
-            startMouseX = e.pageX;
-            startMouseY = e.pageY;
-        };
-
-        /** @param {MouseEvent | Touch} e */
-        const translate = (e) => {
-            const movementX = e.pageX - startMouseX;
-            const movementY = e.pageY - startMouseY;
+        const handleTranslate = (e) => {
+            const movementX = e.pageX - startPageX;
+            const movementY = e.pageY - startPageY;
 
             this.style.left = clamp(0, startLeft + movementX, startLeft + startRight) + "px";
             this.style.top = clamp(0, startTop + movementY, startTop + startBottom) + "px";
         };
 
-        this.addEventListener("mousedown", (e) => {
-            e.preventDefault();
-
-            this.focus();
-            assignStartingValues(e);
-
-            window.addEventListener("mousemove", translate);
-            window.addEventListener(
-                "mouseup",
-                () => window.removeEventListener("mousemove", translate),
-                { once: true },
-            );
-        });
-
         /** @type {number?} */
-        let currentTouchId = null;
-        /** @type {TouchEventHandler} */
-        const touchTranslate = (e) => {
-            if (currentTouchId === null) return;
-
-            const touch = this.#getTouch(e.changedTouches, currentTouchId);
-            if (touch) translate(touch);
+        let currentPid = null;
+        /** @param {PointerEvent} e */
+        const guardedTranslate = (e) => {
+            if (e.pointerId === currentPid) handleTranslate(e);
         };
 
-        this.addEventListener(
-            "touchstart",
-            (e) => {
-                // abort if a touch is already active
-                if (currentTouchId !== null) return;
+        this.addEventListener("pointerdown", (e) => {
+            // abort if a pointer is already active
+            if (currentPid !== null) return;
+            currentPid = e.pointerId;
 
-                this.focus();
-                const touch = e.changedTouches[0];
-                currentTouchId = touch.identifier;
+            // assign initial conditions
+            startLeft = this.offsetLeft;
+            startTop = this.offsetTop;
+            startRight = this.#parentBox.width - (startLeft + this.offsetWidth);
+            startBottom = this.#parentBox.height - (startTop + this.offsetHeight);
+            startPageX = e.pageX;
+            startPageY = e.pageY;
 
-                assignStartingValues(touch);
+            this.focus();
+            window.addEventListener("pointermove", guardedTranslate);
+        });
 
-                window.addEventListener("touchmove", touchTranslate, { passive: true });
-            },
-            { passive: true },
-        );
-
-        window.addEventListener(
-            "touchend",
-            (e) => {
-                if (currentTouchId === null || !this.#getTouch(e.changedTouches, currentTouchId))
-                    return;
-
-                window.removeEventListener("touchmove", touchTranslate);
-                currentTouchId = null;
-            },
-            { passive: true },
-        );
+        window.addEventListener("pointerup", (e) => {
+            if (currentPid === null || e.pointerId !== currentPid) return;
+            window.removeEventListener("pointermove", guardedTranslate);
+            currentPid = null;
+        });
     }
 
     #attachKeyBindings() {
         /** @param {KeyboardEvent} e */
         const handleKeyPress = (e) => {
-            const parentBox = this.#parentBox;
             const width = this.offsetWidth;
             const height = this.offsetHeight;
             const availLeft = this.offsetLeft;
             const availTop = this.offsetTop;
-            const availRight = parentBox.width - (availLeft + width);
-            const availBottom = parentBox.height - (availTop + height);
+            const availRight = this.#parentBox.width - (availLeft + width);
+            const availBottom = this.#parentBox.height - (availTop + height);
 
             let shift = 1;
             if (e.metaKey) shift = 10;
@@ -394,7 +331,7 @@ export class AreaSelector extends HTMLElement {
 
         this.addEventListener("focus", () => {
             window.addEventListener("keydown", handleKeyPress);
-            window.addEventListener(
+            this.addEventListener(
                 "blur",
                 () => window.removeEventListener("keydown", handleKeyPress),
                 { once: true },
@@ -402,12 +339,18 @@ export class AreaSelector extends HTMLElement {
         });
     }
 
-    /**
-     * @param {TouchList} touchList
-     * @param {number} identifier
-     */
-    #getTouch(touchList, identifier) {
-        return [...touchList].find((t) => t.identifier === identifier);
+    #watchParentBox() {
+        const resizeObs = new ResizeObserver(() => {
+            this.#parentBox = this.offsetParent?.getBoundingClientRect();
+        });
+
+        new IntersectionObserver(() => {
+            if (this.offsetParent) {
+                resizeObs.observe(this.offsetParent);
+            } else {
+                resizeObs.disconnect();
+            }
+        }).observe(this);
     }
 }
 
