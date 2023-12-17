@@ -1,8 +1,8 @@
-const CACHE_NAME = "videocrop-v1.2.7";
+const CACHE_NAME = "videocrop-v1.3.0-dev1";
 const FFMPEG_URLS = [
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm",
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.worker.js",
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.5/dist/umd/ffmpeg-core.wasm",
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.5/dist/umd/ffmpeg-core.js",
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.5/dist/umd/ffmpeg-core.worker.js",
 ];
 const PRECACHE_URLS = [
     "/",
@@ -10,6 +10,7 @@ const PRECACHE_URLS = [
     "/index.js",
     "/area-selector.mjs",
     "/ffmpeg.min.js",
+    "/814.ffmpeg.js",
     "/sw-registrar.js",
     "/default-yellow.png",
     ...FFMPEG_URLS,

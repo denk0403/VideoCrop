@@ -24,16 +24,29 @@
     <meta name="twitter:site" content="@denk0403" />
     <meta name="twitter:creator" content="@denk0403" />
 
-    <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js" />
+    <!-- <link rel="preload" as="script"
+        href="https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.5/dist/umd/ffmpeg-core.js" />
     <link rel="preload" as="script"
-        href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.worker.js" />
-    <link rel="preload" as="fetch" href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm" />
+        href="https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.5/dist/umd/ffmpeg-core.worker.js" />
+    <link rel="preload" as="fetch" crossorigin="anonymous"
+        href="https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.5/dist/umd/ffmpeg-core.wasm" /> -->
 
     <link rel="stylesheet" href="styles.css">
 
     <script async src="./sw-registrar.js"></script>
-    <!-- https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js -->
+
+    <!-- Loaded by ffmpeg.js -->
+    <!-- https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.8/dist/umd/814.ffmpeg.js -->
+    <!-- <link rel="preload" as="script" href="./814.ffmpeg.js" /> -->
+
+    <!-- Creates FFmpegWASM -->
+    <!-- https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.8/dist/umd/ffmpeg.js -->
     <script defer src="./ffmpeg.min.js"></script>
+
+    <!-- Creates FFmpegUtil -->
+    <!-- https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js -->
+    <script defer src="./ffmpeg-util.min.js"></script>
+
     <script type="module" src="area-selector.mjs"></script>
     <script defer src="./index.js"></script>
 </head>

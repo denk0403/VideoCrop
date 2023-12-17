@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "baseUrl": "public",
+        "allowJs": true,
+        "outDir": "dist",
+        "target": "ESNext",
+        "module": "CommonJS"
+    },
+    "include": [
+        "**/*.js",
+        "**/*.d.ts"
+    ],
+
+}

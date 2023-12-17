@@ -74,21 +74,29 @@
         resultBox.scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
-    const { createFFmpeg, fetchFile } = FFmpeg;
+    const { fetchFile, toBlobURL } = FFmpegUtil;
+    const { FFmpeg } = FFmpegWASM;
 
-    let ffmpeg;
-    function initFFmpeg() {
-        ffmpeg = createFFmpeg({
-            // corePath: "./ffmpeg-core/ffmpeg-core.js",
-            corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
-            progress: ({ ratio }) => {
-                const clampedRatio = clamp(0, ratio, 100);
-                progress.textContent = `${(clampedRatio * 100).toFixed(2)}%`;
-            },
-        });
-        return ffmpeg;
+    /** @type {InstanceType<FFmpeg>} */
+    const ffmpeg = new FFmpeg();
+    ffmpeg.on("progress", ({ progress: ratio }) => {
+        const clampedRatio = clamp(0, ratio, 1);
+        progress.textContent = `${(clampedRatio * 100).toFixed(2)}%`;
+    });
+
+    async function loadFFmpeg() {
+        if (!ffmpeg.loaded) {
+            const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.5/dist/umd";
+
+            const [coreURL, wasmURL, workerURL] = await Promise.all([
+                toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+                toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+                toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript"),
+            ]);
+
+            await ffmpeg.load({ coreURL, wasmURL, workerURL });
+        }
     }
-    initFFmpeg();
 
     /**
      * Calculates new dimensions using some scale factor.
@@ -115,11 +123,12 @@
      * @param {number} scaleFactor
      */
     const transcode = async (file, x, y, w, h, start, end, scaleFactor) => {
-        if (!ffmpeg.isLoaded()) await ffmpeg.load();
+        await loadFFmpeg();
 
         // Scaling code
         const [outWidth, outHeight] = calcDimensions(w, h, scaleFactor);
 
+        /** @type {Uint8Array} */
         let ffmpegFile;
         try {
             ffmpegFile = await fetchFile(file);
@@ -128,13 +137,14 @@
         }
 
         try {
-            ffmpeg.FS("writeFile", file.name, ffmpegFile);
+            // ffmpeg.FS("writeFile", file.name, ffmpegFile);
+            await ffmpeg.writeFile(file.name, ffmpegFile);
         } catch (err) {
             throw new Error("Error writing input file", { cause: err });
         }
 
         try {
-            await ffmpeg.run(
+            await ffmpeg.exec([
                 "-i",
                 file.name,
                 "-ss",
@@ -146,14 +156,16 @@
                 // "-q:v",
                 // "1",
                 "output.mp4",
-            );
+            ]);
         } catch (err) {
             throw new Error("Error running crop command", { cause: err });
         }
 
+        /** @type {Uint8Array} */
         let data;
         try {
-            data = ffmpeg.FS("readFile", "output.mp4");
+            // data = ffmpeg.FS("readFile", "output.mp4");
+            data = await ffmpeg.readFile("output.mp4");
         } catch (err) {
             throw new Error("Error reading output file", { cause: err });
         }
@@ -295,7 +307,7 @@
 
                 function cancel() {
                     try {
-                        ffmpeg.exit();
+                        ffmpeg.terminate();
                     } finally {
                         progress.textContent = "Canceled";
                         cropBtn.textContent = "Crop";
@@ -303,7 +315,7 @@
                         cropBtn.onclick = crop;
                         loader.style.display = "none";
 
-                        initFFmpeg();
+                        loadFFmpeg();
                     }
                 }
                 async function crop() {
