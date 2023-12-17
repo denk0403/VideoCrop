@@ -2,7 +2,7 @@
 # or with alias `run <function_name>`
 
 start() {
-    vercel dev
+    npm start
 }
 
 if [ "$#" -eq 0 ]; then start; else "$@"; fi

@@ -76,6 +76,7 @@
 
     const { createFFmpeg, fetchFile } = FFmpeg;
 
+    /** @type {import("../types").FFmpeg} */
     let ffmpeg;
     function initFFmpeg() {
         ffmpeg = createFFmpeg({
@@ -120,6 +121,7 @@
         // Scaling code
         const [outWidth, outHeight] = calcDimensions(w, h, scaleFactor);
 
+        /** @type {Uint8Array} */
         let ffmpegFile;
         try {
             ffmpegFile = await fetchFile(file);
@@ -151,6 +153,7 @@
             throw new Error("Error running crop command", { cause: err });
         }
 
+        /** @type {Uint8Array} */
         let data;
         try {
             data = ffmpeg.FS("readFile", "output.mp4");
