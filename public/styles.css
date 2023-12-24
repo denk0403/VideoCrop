@@ -290,7 +290,6 @@ area-selector:focus-within {
 }
 
 #result {
-    max-width: 1000px;
     margin-inline: auto;
     margin-top: 20px;
     background-color: #f8f8f8;
