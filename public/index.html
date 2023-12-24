@@ -29,6 +29,16 @@
         href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.worker.js" />
     <link rel="preload" as="fetch" href="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm" />
 
+    <!-- Preload FontAwesome fonts -->
+    <link as="font" rel="preload" referrerpolicy="no-referrer" type="font/woff2" crossorigin
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/webfonts/fa-solid-900.woff2" />
+
+    <!-- FontAwesome Stylesheets -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/fontawesome.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/solid.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" media="print" onload="this.media='all'" />
+
     <link rel="stylesheet" href="styles.css">
 
     <script async src="./sw-registrar.js"></script>
@@ -39,33 +49,49 @@
 </head>
 
 <body>
-    <h1 id="title">VideoCrop</h1>
+    <header>
+        <h1 id="title">VideoCrop</h1>
+        <img id="logo" src="icon.png" width="256" height="256">
+    </header>
 
-    <p id="author" style="display: flex; justify-content: center; align-items: center; gap: 10px;">
-        <span>
-            <span>Made by <a href="https://denniskats.dev/">Dennis Kats</a>
-            </span><br>
-            <a href="https://github.com/denk0403/VideoCrop">View the source on GitHub</a><br>
-        </span>
-    </p>
+    <main>
+        <div class="getting-started container">
+            <div style="padding: 10px;">
+                <p id="description">
+                    <span style="font-weight: bold">VideoCrop</span> is an offline-compatible, browser-based video
+                    cropping tool built on top of
+                    <span style="font-family: 'Courier New'; font-weight: bold">ffmpeg.wasm</span>.
+                    In fact,
+                    VideoCrop will <span style="text-decoration: underline;">never upload or send anything to a
+                        server</span>,
+                    and works even if you disable
+                    your Wi-Fi.
+                    Start by clicking on the file input button below or by dragging and dropping a
+                    video file onto the page.
+                </p>
+                <p>
+                    <span>Made by <a href="https://denniskats.dev/">Dennis Kats.</a></span>
+                    <a href="https://github.com/denk0403/VideoCrop">View on GitHub</a>
+                </p>
+            </div>
+            <div id="file-wrapper">
+                <input type="file" id="input" accept="video/*" />
+                <div id="error-msg"></div>
+            </div>
+        </div>
 
-    <div
-        style="background-color: #f8f8f8; max-width: 1000px; margin: 0 auto; border-radius: 10px; border: 1px solid #ccc;">
-        <div style="padding: 10px;">
-            <p id="description">
-                <span style="font-weight: bold">VideoCrop</span> is an offline-compatible, browser-based video
-                cropping tool built on top of
-                <span style="font-family: 'Courier New'; font-weight: bold">ffmpeg.wasm</span>.
-                In fact,
-                VideoCrop will <span style="text-decoration: underline;">never upload or send anything to a
-                    server</span>,
-                and works even if you disable
-                your Wi-Fi.
-                Start by clicking on the file input button or by dragging and dropping a
-                video file onto the page.
-            </p>
-            <details style="margin-bottom: 20px; text-align: left;" open>
-                <summary>Keyboard Shortcuts (<em>while the "area selector" is visible and focused...</em>)</summary>
+        <!-- Editor; initially hidden -->
+        <div id="editor" class="container" style="display: none;">
+
+            <!-- Toolbar -->
+            <div id="toolbar">
+                <button id="minimize-btn" title="Minimize area">Shrink <i class="fa-solid fa-minimize"></i></button>
+                <button id="maximize-btn" title="Maximize area">Maximize <i class="fa-solid fa-maximize"></i></button>
+            </div>
+
+            <!-- Keyboard Shortcuts -->
+            <details id="kbd-shortcuts">
+                <summary>Keyboard Shortcuts (<em>while the "area selector" is focused...</em>)</summary>
                 <ul>
                     <li>Use <kbd>↑</kbd>,<kbd>→</kbd>,<kbd>↓</kbd>,<kbd>←</kbd> (the arrow keys) to move the "area
                         selector" by 1 pixel.</li>
@@ -78,71 +104,113 @@
                         "area selector".</li>
                 </ul>
             </details>
-        </div>
-        <div id="file-wrapper">
-            <input type="file" id="input" accept="video/*" />
-            <div id="error-msg"></div>
-        </div>
-    </div>
-    <div>
-        <div class="bounds-container">
-            <div id="bounds">
-                <area-selector id="area" tabindex="0">
-                    <div id="area-txt"></div>
-                </area-selector>
-                <video id="video-input" controls preload="auto"></video>
-            </div>
-        </div>
-        <div id="params">
-            <div class="param">
-                Trim:
-                <input id="start-time" type="number" min="0" step="0.01" pattern="^\d*(\.\d{0,2})?$" inputmode="decimal"
-                    disabled />
-                —
-                <input id="end-time" type="number" min="1" step="0.01" pattern="^\d*(\.\d{0,2})?$" inputmode="decimal"
-                    disabled />
-            </div>
-            <label class="param scale">
-                Scale:
-                <input id="scale" type="number" min="0.1" step="0.01" pattern="^\d*(\.\d{0,2})?$" inputmode="decimal"
-                    disabled />
-            </label>
-        </div>
-        <div id="out-dim"></div>
-    </div>
-    <div>
-        <button disabled id="crop-btn">Crop</button>
-        <div id="loader"></div>
-        <span id="progress"></span>
-    </div>
 
-    <div id="result">
-        <div id="result-btn-group">
-            <button id="share-btn" class="btn" aria-label="Share Button">
-                Share
-                <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="18" height="18" viewBox="2 2 20 20">
-                    <path
-                        d="M 16.707031 2.2929688 L 15.292969 3.7070312 L 17.585938 6 L 17 6 C 10.936593 6 6 10.936593 6 17 L 6 18 L 8 18 L 8 17 C 8 12.017407 12.017407 8 17 8 L 17.585938 8 L 15.292969 10.292969 L 16.707031 11.707031 L 21.414062 7 L 16.707031 2.2929688 z M 2 8 L 2 9 L 2 19 C 2 20.64497 3.3550302 22 5 22 L 19 22 C 20.64497 22 22 20.64497 22 19 L 22 18 L 22 17 L 20 17 L 20 18 L 20 19 C 20 19.56503 19.56503 20 19 20 L 5 20 C 4.4349698 20 4 19.56503 4 19 L 4 9 L 4 8 L 2 8 z">
-                    </path>
-                </svg>
-            </button>
-            <a id="download-btn" class="btn" aria-label="Download Button">
-                Download
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="18" height="18">
-                    <path
-                        d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z" />
-                </svg>
-            </a>
-            <a id="support" href="https://www.buymeacoffee.com/denniskats" title="Support me"
-                style="line-height: 0;"><img src="/default-yellow.png" alt="Buy Me A Coffee"
-                    style="height: 40px !important;" /></a>
-        </div>
-        <div style="padding: 20px;">
-            <div class="bounds-container" style="padding: 0;">
-                <video id="video-output" controls preload="auto"></video>
+            <!-- Bounds Container -->
+            <div class="bounds-container">
+                <div id="bounds">
+                    <area-selector id="area" tabindex="0">
+                        <div id="area-txt">
+                            <div>x: <span id="area-txt-x"></span></div>
+                            <div>y: <span id="area-txt-y"></span></div>
+                            <div>w: <span id="area-txt-w"></span></div>
+                            <div>h: <span id="area-txt-h"></span></div>
+                        </div>
+                    </area-selector>
+                    <video id="video-input" controls preload="auto"></video>
+                </div>
+            </div>
+            <div id="params">
+
+                <!-- Trim Param -->
+                <div class="param">
+                    <div class="param-title">Trim</div>
+                    <div class="param-input">
+                        <span style="display: inline-block;">
+                            <label>
+                                <span>Start:</span>
+                                <input id="start-time" type="number" min="0" step="0.01" pattern="^\d*(\.\d{0,2})?$"
+                                    inputmode="decimal" />
+                            </label>
+                            <span> — </span>
+                        </span>
+                        <label style="display: inline-block;">
+                            <span>End:</span>
+                            <input id="end-time" type="number" min="1" step="0.01" pattern="^\d*(\.\d{0,2})?$"
+                                inputmode="decimal" />
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Scale Param -->
+                <div class="param">
+                    <label class="param-title" for="scale">Scale</label>
+                    <div class="param-input">
+                        <input id="scale" type="number" min="0.1" step="0.01" pattern="^\d*(\.\d{0,2})?$"
+                            inputmode="decimal" />
+                    </div>
+                    <div id="out-dim" class="param-extra"></div>
+                </div>
+
+                <!-- Remove Audio Param -->
+                <div class="param inline">
+                    <span class="param-input">
+                        <label for="remove-audio">Remove Audio</label>
+                        <input id="remove-audio" type="checkbox" />
+                    </span>
+                </div>
+
+            </div>
+
+            <!-- Preview FFmpeg Command -->
+            <div id="cmd-preview">
+                <span style="display: flex; align-items: center; font-family: monospace;">
+                    <span>
+                        <span style="user-select: none;">%</span>
+                        <span id="cmd" title="FFmpeg command preview" style="padding: 10px 0;"></span>
+                    </span>
+                </span>
+
+
+                <!-- Crop button and progress -->
+                <div id="go-btn">
+                    <button id="crop-btn">Go</button>
+                    <div id="progress-indicator">
+                        <div id="loader"></div>
+                        <span id="progress"></span>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+
+        <!-- Transcode Result -->
+        <div id="result" class="container">
+            <div id="result-btn-group">
+                <button id="share-btn" class="btn" aria-label="Share Button">
+                    Share
+                    <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="18" height="18" viewBox="2 2 20 20">
+                        <path
+                            d="M 16.707031 2.2929688 L 15.292969 3.7070312 L 17.585938 6 L 17 6 C 10.936593 6 6 10.936593 6 17 L 6 18 L 8 18 L 8 17 C 8 12.017407 12.017407 8 17 8 L 17.585938 8 L 15.292969 10.292969 L 16.707031 11.707031 L 21.414062 7 L 16.707031 2.2929688 z M 2 8 L 2 9 L 2 19 C 2 20.64497 3.3550302 22 5 22 L 19 22 C 20.64497 22 22 20.64497 22 19 L 22 18 L 22 17 L 20 17 L 20 18 L 20 19 C 20 19.56503 19.56503 20 19 20 L 5 20 C 4.4349698 20 4 19.56503 4 19 L 4 9 L 4 8 L 2 8 z">
+                        </path>
+                    </svg>
+                </button>
+                <a id="download-btn" class="btn" aria-label="Download Button">
+                    Download
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="18" height="18">
+                        <path
+                            d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z" />
+                    </svg>
+                </a>
+                <a id="support" href="https://www.buymeacoffee.com/denniskats" title="Support me"
+                    style="line-height: 0;"><img src="/default-yellow.png" alt="Buy Me A Coffee"
+                        style="height: 40px !important;" /></a>
+            </div>
+            <div style="padding: 20px;">
+                <div class="bounds-container" style="padding: 0;">
+                    <video id="video-output" controls preload="auto"></video>
+                </div>
+            </div>
+        </div>
+    </main>
 </body>
 
 </html>
