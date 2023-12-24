@@ -98,6 +98,38 @@ export class AreaSelector extends HTMLElement {
                     <slot></slot>
                 </div>
             `;
+
+        let onChange;
+        Object.defineProperty(this, "onchange", {
+            get() {
+                return onChange;
+            },
+            set(fn) {
+                if (onChange) this.removeEventListener("change", onChange);
+                onChange = fn;
+                this.addEventListener("change", fn);
+            },
+        });
+    }
+
+    get x() {
+        return this.offsetLeft;
+    }
+
+    get y() {
+        return this.offsetTop;
+    }
+
+    get width() {
+        return this.offsetWidth;
+    }
+
+    get height() {
+        return this.offsetHeight;
+    }
+
+    dispatchChangeEvent() {
+        this.dispatchEvent(new CustomEvent("change"));
     }
 
     connectedCallback() {
@@ -203,7 +235,10 @@ export class AreaSelector extends HTMLElement {
 
                 /** @param {PointerEvent} e */
                 const guardedResize = (e) => {
-                    if (e.pointerId === pid) handleResize(e);
+                    if (e.pointerId === pid) {
+                        handleResize(e);
+                        this.dispatchChangeEvent();
+                    }
                 };
 
                 this.focus();
@@ -245,7 +280,10 @@ export class AreaSelector extends HTMLElement {
         let currentPid = null;
         /** @param {PointerEvent} e */
         const guardedTranslate = (e) => {
-            if (e.pointerId === currentPid) handleTranslate(e);
+            if (e.pointerId === currentPid) {
+                handleTranslate(e);
+                this.dispatchChangeEvent();
+            }
         };
 
         this.addEventListener("pointerdown", (e) => {
@@ -305,6 +343,8 @@ export class AreaSelector extends HTMLElement {
                         this.style.width = newWidth + "px";
                         break;
                     }
+                    default:
+                        return;
                 }
             } else {
                 // translate
@@ -325,8 +365,12 @@ export class AreaSelector extends HTMLElement {
                         this.style.left = newLeft + "px";
                         break;
                     }
+                    default:
+                        return;
                 }
             }
+
+            this.dispatchChangeEvent();
         };
 
         this.addEventListener("focus", () => {
@@ -351,6 +395,26 @@ export class AreaSelector extends HTMLElement {
                 resizeObs.disconnect();
             }
         }).observe(this);
+    }
+
+    setX(x) {
+        if (x < 0 || x > this.#parentBox.width - this.offsetWidth) return;
+        this.style.left = x + "px";
+    }
+
+    setY(y) {
+        if (y < 0 || y > this.#parentBox.height - this.offsetHeight) return;
+        this.style.top = y + "px";
+    }
+
+    setWidth(width) {
+        if (width < MIN_SIZE || width > this.#parentBox.width - this.offsetLeft) return;
+        this.style.width = width + "px";
+    }
+
+    setHeight(height) {
+        if (height < MIN_SIZE || height > this.#parentBox.height - this.offsetTop) return;
+        this.style.height = height + "px";
     }
 }
 
