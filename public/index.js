@@ -62,11 +62,13 @@
         areaSelector.setY(0);
         areaSelector.setWidth(videoIn.videoWidth);
         areaSelector.setHeight(videoIn.videoHeight);
+        areaSelector.dispatchChangeEvent();
     };
 
     minimizeBtn.onclick = () => {
         areaSelector.setWidth(areaSelector.width / 2);
         areaSelector.setHeight(areaSelector.height / 2);
+        areaSelector.dispatchChangeEvent();
     };
 
     cmd.onclick = () => {
